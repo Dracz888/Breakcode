@@ -18,20 +18,30 @@ servidor/        El cerebro: API en Python (FastAPI) — Fase 1
     routers/       Las operaciones de la API
   tests/           Pruebas automáticas
   ejemplo.py       Carga un sistema de demostración
+cliente/         Las pantallas: aplicación web (React) — Fase 2
+  src/
+    vistas/        Inicio, editor de sistema, ficha de personaje
+    componentes/   Editor de fórmulas con vista previa en vivo
 ```
 
-## Cómo arrancar el servidor (Fase 1)
+## Cómo arrancar la aplicación
 
 ```bash
-cd servidor
+# 1. Construir las pantallas (solo la primera vez o tras cambiarlas)
+cd cliente
+npm install
+npm run build
+
+# 2. Arrancar el servidor (sirve la API y también las pantallas)
+cd ../servidor
 pip install -r requirements.txt
 python ejemplo.py                 # opcional: carga el sistema de demostración
 uvicorn app.main:app --reload
 ```
 
-Luego abre `http://localhost:8000/docs` — una pantalla de pruebas interactiva
-(generada automáticamente) donde se puede crear sistemas, atributos, fórmulas
-y fichas sin necesidad de interfaz propia todavía.
+Luego abre `http://localhost:8000` — la aplicación completa, usable desde
+PC o celular. En `http://localhost:8000/docs` sigue estando la pantalla
+técnica de pruebas de la API.
 
 ## Cómo correr las pruebas
 

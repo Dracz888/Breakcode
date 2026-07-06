@@ -4,7 +4,10 @@ Para iniciarlo:  uvicorn app.main:app --reload  (desde la carpeta servidor/)
 La pantalla de pruebas interactiva queda en:  http://localhost:8000/docs
 """
 
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
 from .routers import personajes, sistemas
@@ -25,9 +28,17 @@ app.include_router(sistemas.router)
 app.include_router(personajes.router)
 
 
-@app.get("/", include_in_schema=False)
-def raiz():
-    return {
-        "mensaje": "Servidor Breakcode funcionando",
-        "pantalla_de_pruebas": "/docs",
-    }
+# Si la aplicación visual ya está construida (cliente/dist), este mismo
+# servidor la entrega: una sola dirección web para todo.
+RUTA_CLIENTE = Path(__file__).resolve().parent.parent.parent / "cliente" / "dist"
+
+if RUTA_CLIENTE.exists():
+    app.mount("/", StaticFiles(directory=RUTA_CLIENTE, html=True), name="cliente")
+else:
+
+    @app.get("/", include_in_schema=False)
+    def raiz():
+        return {
+            "mensaje": "Servidor Breakcode funcionando",
+            "pantalla_de_pruebas": "/docs",
+        }

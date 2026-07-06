@@ -3,3 +3,5 @@ __pycache__/
 .pytest_cache/
 breakcode.db
 .env
+node_modules/
+cliente/dist/
