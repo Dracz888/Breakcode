@@ -3,7 +3,7 @@ import * as api from "../api";
 import type { Pantalla } from "../App";
 import EditorFormula, { aClave } from "../componentes/EditorFormula";
 
-type PestanaId = "atributos" | "formulas" | "fichas";
+type PestanaId = "atributos" | "formulas" | "fichas" | "mapas";
 
 interface Props {
   sistemaId: number;
@@ -58,6 +58,7 @@ export default function VistaSistema({ sistemaId, navegar }: Props) {
             ["atributos", "Atributos"],
             ["formulas", "Fórmulas"],
             ["fichas", "Fichas"],
+            ["mapas", "Mapas"],
           ] as [PestanaId, string][]
         ).map(([id, titulo]) => (
           <button
@@ -85,6 +86,9 @@ export default function VistaSistema({ sistemaId, navegar }: Props) {
       )}
       {pestana === "fichas" && (
         <PestanaFichas sistema={sistema} navegar={navegar} setError={setError} />
+      )}
+      {pestana === "mapas" && (
+        <PestanaMapas sistema={sistema} navegar={navegar} setError={setError} />
       )}
     </>
   );
@@ -288,6 +292,137 @@ function PestanaFormulas({
             await recargar();
           }}
         />
+      </div>
+    </div>
+  );
+}
+
+// ---------- Pestaña: Mapas ----------
+
+function PestanaMapas({
+  sistema,
+  navegar,
+  setError,
+}: {
+  sistema: api.SistemaDetalle;
+  navegar: (p: Pantalla) => void;
+  setError: (m: string) => void;
+}) {
+  const [mapas, setMapas] = useState<api.Mapa[]>([]);
+  const [nombre, setNombre] = useState("");
+  const [ancho, setAncho] = useState(16);
+  const [alto, setAlto] = useState(12);
+
+  const recargar = useCallback(
+    () =>
+      api
+        .listarMapas(sistema.id)
+        .then(setMapas)
+        .catch((e) => setError(e.message)),
+    [sistema.id, setError],
+  );
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function crear(evento: FormEvent) {
+    evento.preventDefault();
+    setError("");
+    try {
+      const mapa = await api.crearMapa(sistema.id, { nombre, ancho, alto });
+      navegar({ nombre: "mapa", mapaId: mapa.id, sistemaId: sistema.id });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function borrar(mapa: api.Mapa) {
+    if (!confirm(`¿Borrar el mapa "${mapa.nombre}"?`)) return;
+    setError("");
+    try {
+      await api.borrarMapa(mapa.id);
+      recargar();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  return (
+    <div className="dos-columnas">
+      <div>
+        {mapas.length === 0 && (
+          <p className="nota">
+            Los mapas de batalla son cuadrículas que pintas con terrenos (pasto, agua,
+            muros…) y donde colocas y mueves las fichas. Crea el primero al lado.
+          </p>
+        )}
+        {mapas.map((m) => (
+          <div
+            key={m.id}
+            className="tarjeta tarjeta-clic"
+            onClick={() => navegar({ nombre: "mapa", mapaId: m.id, sistemaId: sistema.id })}
+          >
+            <div className="fila">
+              <div className="espacio">
+                <h3>{m.nombre}</h3>
+                <span className="nota">
+                  {m.ancho} × {m.alto} celdas
+                </span>
+              </div>
+              <button
+                className="boton boton-peligro"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  borrar(m);
+                }}
+              >
+                Borrar
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="tarjeta">
+        <h3>Nuevo mapa</h3>
+        <form onSubmit={crear}>
+          <label className="campo">
+            <span>Nombre</span>
+            <input
+              type="text"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Ej. Claro del bosque"
+              required
+            />
+          </label>
+          <div className="fila">
+            <label className="campo" style={{ flex: 1 }}>
+              <span>Ancho (celdas)</span>
+              <input
+                type="number"
+                min={4}
+                max={80}
+                value={ancho}
+                onChange={(e) => setAncho(Number(e.target.value))}
+              />
+            </label>
+            <label className="campo" style={{ flex: 1 }}>
+              <span>Alto (celdas)</span>
+              <input
+                type="number"
+                min={4}
+                max={80}
+                value={alto}
+                onChange={(e) => setAlto(Number(e.target.value))}
+              />
+            </label>
+          </div>
+          <button className="boton" type="submit">
+            Crear mapa
+          </button>
+        </form>
       </div>
     </div>
   );

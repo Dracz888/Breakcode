@@ -8,7 +8,15 @@ borrable y editable — es solo material de demostración.
 """
 
 from app.database import Base, SesionLocal, engine
-from app.models import DefinicionAtributo, DefinicionEstadistica, Personaje, Sistema
+from app.models import (
+    DefinicionAtributo,
+    DefinicionEstadistica,
+    Mapa,
+    Personaje,
+    Sistema,
+    Token,
+)
+from app.terrenos import TERRENO_INICIAL
 
 Base.metadata.create_all(bind=engine)
 db = SesionLocal()
@@ -58,31 +66,60 @@ for clave, nombre, formula in estadisticas:
         )
     )
 
-db.add(
-    Personaje(
-        sistema_id=sistema.id,
-        nombre="Kaelith",
-        nivel=3,
-        atributos={
-            "fuerza": 5,
-            "destreza": 3,
-            "intelecto": 2,
-            "voluntad": 3,
-            "voluntad_arcana": 4,
-            "sintonia": 2,
-        },
-    )
+kaelith = Personaje(
+    sistema_id=sistema.id,
+    nombre="Kaelith",
+    nivel=3,
+    atributos={
+        "fuerza": 5,
+        "destreza": 3,
+        "intelecto": 2,
+        "voluntad": 3,
+        "voluntad_arcana": 4,
+        "sintonia": 2,
+    },
 )
-db.add(
-    Personaje(
-        sistema_id=sistema.id,
-        nombre="Ogro de las ciénagas",
-        nivel=2,
-        es_monstruo=True,
-        atributos={"fuerza": 8, "destreza": 1, "intelecto": 1, "voluntad": 2},
-    )
+ogro = Personaje(
+    sistema_id=sistema.id,
+    nombre="Ogro de las ciénagas",
+    nivel=2,
+    es_monstruo=True,
+    atributos={"fuerza": 8, "destreza": 1, "intelecto": 1, "voluntad": 2},
+)
+db.add_all([kaelith, ogro])
+db.flush()
+
+# Un mapa de batalla de muestra: un claro con río, camino y arboleda.
+ancho, alto = 16, 12
+celdas = [[TERRENO_INICIAL] * ancho for _ in range(alto)]
+for y in range(alto):  # río vertical con un vado de arena
+    celdas[y][10] = "agua"
+    celdas[y][11] = "agua"
+celdas[5][10], celdas[5][11] = "arena", "arena"
+for x in range(ancho):  # camino horizontal
+    if celdas[5][x] == TERRENO_INICIAL:
+        celdas[5][x] = "camino"
+for x, y in [(2, 1), (3, 2), (1, 8), (2, 9), (6, 10), (13, 2), (14, 8)]:  # arboleda
+    celdas[y][x] = "arbol"
+for x in range(4, 9):  # ruina de muro
+    celdas[8][x] = "muro"
+celdas[8][6] = "camino"  # con una brecha
+
+mapa = Mapa(
+    sistema_id=sistema.id, nombre="Claro del bosque", ancho=ancho, alto=alto, celdas=celdas
+)
+db.add(mapa)
+db.flush()
+db.add_all(
+    [
+        Token(mapa_id=mapa.id, personaje_id=kaelith.id, x=3, y=5),
+        Token(mapa_id=mapa.id, personaje_id=ogro.id, x=13, y=5),
+    ]
 )
 
 db.commit()
-print(f"Sistema de ejemplo creado (id {sistema.id}) con 6 atributos, 5 fórmulas y 2 fichas.")
+print(
+    f"Sistema de ejemplo creado (id {sistema.id}) con 6 atributos, 5 fórmulas, "
+    "2 fichas y 1 mapa de batalla."
+)
 db.close()

@@ -148,3 +148,57 @@ class PersonajeConEstadisticas(PersonajeSalida):
 
     estadisticas: dict[str, float]
     errores_de_formulas: dict[str, str]
+
+
+# ---------- Mapas de batalla ----------
+
+class MapaCrear(BaseModel):
+    nombre: str = Field(min_length=1, max_length=120)
+    ancho: int = Field(default=16, ge=4, le=80)
+    alto: int = Field(default=12, ge=4, le=80)
+
+
+class MapaSalida(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    sistema_id: int
+    nombre: str
+    ancho: int
+    alto: int
+
+
+class TokenSalida(BaseModel):
+    id: int
+    mapa_id: int
+    personaje_id: int
+    nombre: str
+    es_monstruo: bool
+    x: int
+    y: int
+
+
+class MapaDetalle(MapaSalida):
+    celdas: list[list[str]]
+    tokens: list[TokenSalida]
+
+
+class CambioDeCelda(BaseModel):
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)
+    terreno: str
+
+
+class PintarCeldas(BaseModel):
+    cambios: list[CambioDeCelda] = Field(min_length=1, max_length=6400)
+
+
+class TokenColocar(BaseModel):
+    personaje_id: int
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)
+
+
+class TokenMover(BaseModel):
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)

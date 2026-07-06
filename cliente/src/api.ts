@@ -153,3 +153,67 @@ export const editarPersonaje = (
 
 export const borrarPersonaje = (id: number) =>
   pedir<void>(`/personajes/${id}`, { method: "DELETE" });
+
+// ---------- Mapas de batalla ----------
+
+export interface Terreno {
+  nombre: string;
+  color: string;
+  simbolo: string;
+  bloquea: boolean;
+}
+
+export interface Mapa {
+  id: number;
+  sistema_id: number;
+  nombre: string;
+  ancho: number;
+  alto: number;
+}
+
+export interface Token {
+  id: number;
+  mapa_id: number;
+  personaje_id: number;
+  nombre: string;
+  es_monstruo: boolean;
+  x: number;
+  y: number;
+}
+
+export interface MapaDetalle extends Mapa {
+  celdas: string[][];
+  tokens: Token[];
+}
+
+export const listarTerrenos = () => pedir<Record<string, Terreno>>("/terrenos");
+
+export const listarMapas = (sistemaId: number) =>
+  pedir<Mapa[]>(`/sistemas/${sistemaId}/mapas`);
+
+export const crearMapa = (
+  sistemaId: number,
+  datos: { nombre: string; ancho: number; alto: number },
+) => pedir<Mapa>(`/sistemas/${sistemaId}/mapas`, { method: "POST", body: JSON.stringify(datos) });
+
+export const verMapa = (id: number) => pedir<MapaDetalle>(`/mapas/${id}`);
+
+export const borrarMapa = (id: number) => pedir<void>(`/mapas/${id}`, { method: "DELETE" });
+
+export const pintarCeldas = (
+  mapaId: number,
+  cambios: { x: number; y: number; terreno: string }[],
+) =>
+  pedir<MapaDetalle>(`/mapas/${mapaId}/celdas`, {
+    method: "PUT",
+    body: JSON.stringify({ cambios }),
+  });
+
+export const colocarToken = (mapaId: number, datos: { personaje_id: number; x: number; y: number }) =>
+  pedir<Token>(`/mapas/${mapaId}/tokens`, { method: "POST", body: JSON.stringify(datos) });
+
+export const moverToken = (tokenId: number, x: number, y: number) =>
+  pedir<Token>(`/tokens/${tokenId}`, { method: "PUT", body: JSON.stringify({ x, y }) });
+
+export const quitarToken = (tokenId: number) =>
+  pedir<void>(`/tokens/${tokenId}`, { method: "DELETE" });

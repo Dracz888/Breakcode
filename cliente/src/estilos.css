@@ -278,6 +278,70 @@ input:focus, textarea:focus { outline: 2px solid var(--dorado); outline-offset: 
   padding: 2px 10px;
 }
 
+/* ---------- Mapa de batalla ---------- */
+
+.mapa-disposicion { display: grid; grid-template-columns: 1fr; gap: 16px; }
+
+.mapa-lienzo {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 10px;
+  overflow: auto;
+}
+
+.mapa-lienzo canvas { display: block; margin: 0 auto; border-radius: 4px; }
+
+.mapa-panel {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 16px;
+}
+
+.mapa-panel h3 { margin: 0 0 6px; font-family: Georgia, serif; color: var(--dorado-vivo); }
+
+.paleta-terrenos { display: flex; flex-direction: column; gap: 8px; }
+
+.paleta-terrenos .terreno {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  color: var(--texto);
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  min-height: 44px;
+  text-align: left;
+}
+
+.paleta-terrenos .terreno.activo { border-color: var(--dorado); outline: 1px solid var(--dorado); }
+
+.paleta-terrenos .muestra {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 720px) {
+  .mapa-disposicion { grid-template-columns: 1fr 260px; align-items: start; }
+  .paleta-terrenos { flex-direction: column; }
+}
+
+@media (max-width: 719px) {
+  .paleta-terrenos { flex-direction: row; flex-wrap: wrap; }
+  .paleta-terrenos .terreno { flex: 1 1 45%; }
+}
+
 /* ---------- Pantalla ancha (PC) ---------- */
 
 @media (min-width: 720px) {

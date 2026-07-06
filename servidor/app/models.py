@@ -27,6 +27,9 @@ class Sistema(Base):
     personajes: Mapped[list["Personaje"]] = relationship(
         back_populates="sistema", cascade="all, delete-orphan"
     )
+    mapas: Mapped[list["Mapa"]] = relationship(
+        back_populates="sistema", cascade="all, delete-orphan"
+    )
 
 
 class DefinicionAtributo(Base):
@@ -75,3 +78,40 @@ class Personaje(Base):
     atributos: Mapped[dict] = mapped_column(JSON, default=dict)  # {clave: valor}
 
     sistema: Mapped[Sistema] = relationship(back_populates="personajes")
+    tokens: Mapped[list["Token"]] = relationship(
+        back_populates="personaje", cascade="all, delete-orphan"
+    )
+
+
+class Mapa(Base):
+    """Un mapa de batalla: una cuadrícula de terrenos pintada por el usuario."""
+
+    __tablename__ = "mapas"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    sistema_id: Mapped[int] = mapped_column(ForeignKey("sistemas.id"))
+    nombre: Mapped[str] = mapped_column(String(120))
+    ancho: Mapped[int] = mapped_column(Integer)
+    alto: Mapped[int] = mapped_column(Integer)
+    celdas: Mapped[list] = mapped_column(JSON)  # celdas[y][x] = clave de terreno
+
+    sistema: Mapped[Sistema] = relationship(back_populates="mapas")
+    tokens: Mapped[list["Token"]] = relationship(
+        back_populates="mapa", cascade="all, delete-orphan"
+    )
+
+
+class Token(Base):
+    """La presencia de una ficha sobre una celda del mapa."""
+
+    __tablename__ = "tokens"
+    __table_args__ = (UniqueConstraint("mapa_id", "personaje_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mapa_id: Mapped[int] = mapped_column(ForeignKey("mapas.id"))
+    personaje_id: Mapped[int] = mapped_column(ForeignKey("personajes.id"))
+    x: Mapped[int] = mapped_column(Integer)
+    y: Mapped[int] = mapped_column(Integer)
+
+    mapa: Mapped[Mapa] = relationship(back_populates="tokens")
+    personaje: Mapped[Personaje] = relationship(back_populates="tokens")
