@@ -36,7 +36,8 @@ Lo único que se pierde frente a Unity son efectos gráficos 3D de alta gama —
 2. **Ficha de personaje** — la hoja del personaje sobre un fondo decorativo (pergamino/tablero), con atributos, estadísticas derivadas calculadas automáticamente, equipo e imagen del personaje.
 3. **Mesa de juego (mapa local)** — la cuadrícula táctica con los tokens de personajes y monstruos. Todos los conectados ven los movimientos en el instante en que ocurren.
 4. **Mapa geográfico** — el mapa del mundo con marcadores de lugares; se navega con zoom y arrastre.
-5. **Panel del DJ** — donde tú diseñas: catálogo de atributos, fórmulas, objetos, monstruos, curva de niveles, voces.
+5. **Editor de sistemas** — el taller donde se diseña el sistema de rol completo desde la pantalla: atributos, fórmulas, mecánica de dados, plantillas de objetos, curva de niveles (ver Módulo 0).
+6. **Panel del DJ** — la gestión del día a día de la mesa: monstruos, voces, notas secretas, niebla de guerra.
 
 ### Cómo cambia entre celular y PC (diseño adaptable)
 
@@ -51,13 +52,28 @@ En la práctica: el DJ probablemente jugará desde PC (más espacio para dirigir
 
 ## 3. Las piezas del programa (módulos)
 
+### Módulo 0 — Editor de sistemas (el diferenciador del proyecto)
+
+El principio central: **el programa no trae reglas de rol; trae un taller para fabricarlas.** Dentro de la propia aplicación existe un "Editor de sistemas" donde cualquier persona — empezando por ti — diseña su sistema de rol completo desde la pantalla, sin escribir código jamás:
+
+- **Un "Sistema" es una entidad propia** del programa (como lo es una campaña o una ficha). Puedes tener varios sistemas guardados a la vez —tu sistema de fantasía, uno de ciencia ficción, uno experimental— y cada campaña elige con cuál se juega.
+- **Editor de atributos**: creas atributos con nombre, categoría y descripción, desde un formulario. Las categorías también las defines tú (física/mental/mágica son solo el ejemplo inicial, no algo fijo).
+- **Editor de fórmulas**: escribes las estadísticas derivadas como en Excel (`fuerza * 10 + nivel * 5`). El editor te asiste: mientras escribes te sugiere los nombres de tus atributos, y una **vista previa en vivo** calcula la fórmula al instante contra un personaje de prueba, para que veas el resultado antes de guardar. Si hay un error (escribiste un atributo que no existe, un paréntesis sin cerrar), te lo dice en el momento y en español claro.
+- **Editor de la mecánica de resolución**: qué se tira (d20, pool de dados, porcentual), contra qué se compara y qué cuenta como éxito — configurable por sistema, no fijado en el programa.
+- **Editor de plantillas de objetos**: defines qué campos tiene un "arma" o "armadura" en *tu* sistema (daño base, alcance, peso, requisitos... los que tú decidas).
+- **Editor de curva de niveles**: la tabla de XP por nivel y qué otorga cada subida, editable como una hoja de cálculo.
+- **Cambios con red de seguridad**: si editas una fórmula, todas las fichas existentes se recalculan solas. Si intentas borrar un atributo que alguna ficha o fórmula usa, el programa te avisa qué se rompería antes de dejarte hacerlo.
+- **Compartir sistemas**: un sistema se exporta como archivo y otra persona lo importa en su cuenta — así tu sistema puede viajar a otras mesas.
+
+En resumen: "diseñar mi sistema desde cero" no significa pedirle cambios al programador — significa abrir el editor y hacerlo tú, en el momento, incluso a mitad de partida.
+
 ### Módulo 1 — Motor de reglas y fichas
 
-El corazón del proyecto, igual que en el diseño original: el programa no sabe qué es "Fuerza" o "Maná" — tú defines los atributos, y las estadísticas derivadas (Vida, Defensa, Velocidad...) se calculan con **fórmulas que tú escribes como en Excel**: por ejemplo, Vida máxima = `fuerza * 10 + nivel * 5`. Diseñar una estadística nueva es agregar una fila, no reprogramar nada.
+El motor que ejecuta lo que el Editor de sistemas define: el programa no sabe qué es "Fuerza" o "Maná" — solo sabe guardar los atributos que tú definiste y calcular tus fórmulas. Diseñar una estadística nueva es agregar una fila, no reprogramar nada.
 
-- Atributos organizados en tus tres categorías: física / mental / mágica (y las que quieras añadir después).
-- Equipo (armas, armaduras) como objetos con sus propias estadísticas, que al equiparse entran en las fórmulas (`arma.daño_base`).
-- Curva de niveles configurable: cuánta experiencia pide cada nivel y qué otorga.
+- Cada ficha pertenece a un sistema y hereda de él sus atributos, fórmulas y plantillas.
+- Equipo (armas, armaduras) como objetos con las estadísticas que tu sistema defina, que al equiparse entran en las fórmulas (`arma.daño_base`).
+- Progresión según la curva de niveles de tu sistema.
 - Monstruos: usan el mismo motor que los personajes, solo son fichas más simples. Un solo sistema para todo.
 
 ### Módulo 2 — Mapas
@@ -122,6 +138,7 @@ Con solo registrar eventos, el programa puede reconstruir la línea de tiempo de
 
 ## 5. Cosas añadidas al diseño original (propuestas)
 
+0. **Editor de sistemas en pantalla** — el diseño original guardaba las reglas como datos configurables; esta versión va más allá: una interfaz completa dentro de la app para crear y modificar el sistema de rol (atributos, fórmulas con vista previa, mecánica de dados, niveles), con soporte para varios sistemas y para compartirlos entre usuarios.
 1. **Tirador de dados con historial compartido** — imprescindible en una mesa virtual y barato de construir; estaba implícito y ahora es pieza de primera clase.
 2. **Chat de la partida** — texto entre jugadores dentro de la app, donde también caen los resultados de dados y los avisos del sistema ("Kaelith recibe 7 de daño").
 3. **Niebla de guerra** — el DJ revela el mapa por zonas a medida que el grupo explora. Estándar en mesas virtuales y muy efectivo para el suspenso.
@@ -145,9 +162,9 @@ Cada fase produce algo que se puede ver y probar. No se avanza a la siguiente si
 
 | Fase | Qué se construye | Qué podrás hacer al terminarla |
 |---|---|---|
-| 0 | **Diseño de reglas en papel** | Decidir la mecánica de resolución, tus primeros 6–10 atributos y 2–3 fórmulas de ejemplo |
-| 1 | **Servidor + motor de fórmulas** | El cerebro: crear atributos, fichas y fórmulas, y ver que calculan bien (se prueba desde una pantalla técnica automática, sin interfaz aún) |
-| 2 | **Ficha de personaje en pantalla** | Abrir la web en tu celular o PC, crear un personaje y ver su ficha con las estadísticas calculándose solas |
+| 0 | **Diseño de reglas en papel** | Decidir la mecánica de resolución, tus primeros 6–10 atributos y 2–3 fórmulas de ejemplo — servirán como el primer sistema de prueba del editor |
+| 1 | **Servidor + motor de fórmulas** | El cerebro: crear sistemas, atributos, fichas y fórmulas, y ver que calculan bien (se prueba desde una pantalla técnica automática, sin interfaz aún) |
+| 2 | **Editor de sistemas + ficha en pantalla** | Abrir la web en tu celular o PC, diseñar tus atributos y fórmulas desde el editor (con vista previa en vivo), crear un personaje y ver su ficha calculándose sola |
 | 3 | **Mapa local + editor + tokens** | Pintar un mapa de batalla y mover fichas por la cuadrícula |
 | 4 | **Multijugador** | Dos personas (tu PC y tu celular, por ejemplo) viendo el mismo mapa moverse a la vez |
 | 5 | **Combate por turnos** | Iniciativa, ataques, daño aplicado con tus fórmulas, dados con historial |
