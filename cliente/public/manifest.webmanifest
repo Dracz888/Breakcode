@@ -1,0 +1,17 @@
+{
+  "name": "Breakcode — Plataforma de rol",
+  "short_name": "Breakcode",
+  "description": "Diseña tu sistema de rol y juega con tus amigos: fichas, mapas de batalla y combate por turnos, desde el celular o el PC.",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#171310",
+  "theme_color": "#171310",
+  "icons": [
+    { "src": "/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icono-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

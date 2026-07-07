@@ -30,6 +30,13 @@ app.include_router(mapas.router)
 app.include_router(combate.router)
 
 
+@app.get("/salud", include_in_schema=False)
+def salud():
+    """Señal de vida para el hosting (health check). Debe ir antes del montaje
+    de estáticos para que no la absorba la aplicación web."""
+    return {"estado": "ok"}
+
+
 # Si la aplicación visual ya está construida (cliente/dist), este mismo
 # servidor la entrega: una sola dirección web para todo.
 RUTA_CLIENTE = Path(__file__).resolve().parent.parent.parent / "cliente" / "dist"

@@ -1,0 +1,10 @@
+# Lo que no debe entrar en la imagen (se genera dentro o no hace falta).
+.git
+**/__pycache__
+**/*.pyc
+.pytest_cache
+**/node_modules
+cliente/dist
+servidor/breakcode.db
+*.db
+.env

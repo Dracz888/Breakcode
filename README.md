@@ -73,3 +73,42 @@ En la pestaña **⚔ Combate** del mapa:
 cd servidor
 python -m pytest
 ```
+
+## Publicar en internet (Fase 6)
+
+La app se empaqueta en una sola imagen (Dockerfile) que construye las pantallas
+y las sirve junto con la API. Sirve en Render, Railway o Fly.io.
+
+### Camino recomendado: Render (con `render.yaml`)
+
+1. Sube este repositorio a GitHub.
+2. En [Render](https://render.com): **New + → Blueprint** y elige el repo.
+   Render lee `render.yaml`, construye la imagen, crea una base de datos
+   PostgreSQL y las conecta sola.
+3. Cuando termine, Render te da un enlace `https://…onrender.com`. Ese es el
+   enlace que compartes con tus amigos.
+
+### Probar la imagen en tu máquina (opcional)
+
+```bash
+docker build -t breakcode .
+docker run -p 8000:8000 breakcode      # luego abre http://localhost:8000
+```
+
+### Base de datos
+
+- **En desarrollo**: SQLite (un archivo, cero configuración).
+- **En producción**: PostgreSQL. Basta con poner su dirección en la variable de
+  entorno `DATABASE_URL`; el servidor la traduce sola. En Render, `render.yaml`
+  ya lo hace por ti.
+
+### App instalable (PWA)
+
+Al abrir el enlace en el celular, el navegador ofrece **"Agregar a pantalla de
+inicio"**: la app queda con su propio ícono y a pantalla completa, como una app
+nativa. Su interfaz también carga aunque la red parpadee un momento.
+
+> Nota: el tiempo real (las salas por WebSocket) vive en la memoria del
+> servidor, así que se ejecuta en **un solo proceso** — lo apropiado para un
+> grupo de amigos. Escalar a muchos procesos requeriría un bus de mensajes
+> (como Redis), innecesario a esta escala.

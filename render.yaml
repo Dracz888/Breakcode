@@ -1,0 +1,23 @@
+# Plano de despliegue para Render (https://render.com).
+# Con esto, publicar es: subir el repo a GitHub → en Render "New + → Blueprint"
+# → elegir este repositorio. Render construye la imagen del Dockerfile, crea una
+# base de datos PostgreSQL y conecta ambas sola.
+
+databases:
+  - name: breakcode-db
+    plan: free
+
+services:
+  - type: web
+    name: breakcode
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /salud
+    envVars:
+      # Render rellena esta variable con la dirección de la base de datos de
+      # arriba; el servidor la lee y la traduce solo (ver database.py).
+      - key: DATABASE_URL
+        fromDatabase:
+          name: breakcode-db
+          property: connectionString
