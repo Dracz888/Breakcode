@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
-from .. import models, schemas
+from .. import models, motor, schemas
 from ..database import obtener_db
 from ..terrenos import TERRENO_INICIAL, TERRENOS, bloquea
 from ..tiempo_real import gestor
@@ -27,6 +27,8 @@ def _token_a_salida(token: models.Token) -> schemas.TokenSalida:
         es_monstruo=token.personaje.es_monstruo,
         x=token.x,
         y=token.y,
+        vida_actual=token.vida_actual,
+        vida_maxima=motor.vida_maxima_de(token.personaje),
     )
 
 
@@ -160,7 +162,13 @@ def colocar_token(
         raise HTTPException(409, f"{personaje.nombre} ya está en este mapa")
     _validar_destino(mapa, datos.x, datos.y)
 
-    token = models.Token(mapa_id=mapa.id, personaje_id=personaje.id, x=datos.x, y=datos.y)
+    token = models.Token(
+        mapa_id=mapa.id,
+        personaje_id=personaje.id,
+        x=datos.x,
+        y=datos.y,
+        vida_actual=motor.vida_maxima_de(personaje),  # nace con la vida llena
+    )
     db.add(token)
     db.commit()
     db.refresh(token)

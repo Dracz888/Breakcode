@@ -179,6 +179,8 @@ export interface Token {
   es_monstruo: boolean;
   x: number;
   y: number;
+  vida_actual: number | null;
+  vida_maxima: number | null;
 }
 
 export interface MapaDetalle extends Mapa {
@@ -218,13 +220,89 @@ export const moverToken = (tokenId: number, x: number, y: number) =>
 export const quitarToken = (tokenId: number) =>
   pedir<void>(`/tokens/${tokenId}`, { method: "DELETE" });
 
+// ---------- Combate por turnos ----------
+
+export interface ConfigCombate {
+  formula_iniciativa: string;
+  dado_iniciativa: string;
+  estadistica_vida: string;
+}
+
+export interface GrupoDados {
+  cantidad: number;
+  caras: number;
+  valores: number[];
+}
+
+export interface Tirada {
+  id: number;
+  mapa_id: number;
+  autor: string;
+  motivo: string;
+  expresion: string;
+  grupos: GrupoDados[];
+  modificador: number;
+  total: number;
+  creada_en: string;
+}
+
+export interface Participante {
+  token_id: number;
+  nombre: string;
+  iniciativa: number;
+}
+
+export interface Combate {
+  mapa_id: number;
+  ronda: number;
+  indice_turno: number;
+  orden: Participante[];
+  token_en_turno: number | null;
+}
+
+export const verConfigCombate = (sistemaId: number) =>
+  pedir<ConfigCombate>(`/sistemas/${sistemaId}/config-combate`);
+
+export const guardarConfigCombate = (sistemaId: number, config: ConfigCombate) =>
+  pedir<ConfigCombate>(`/sistemas/${sistemaId}/config-combate`, {
+    method: "PUT",
+    body: JSON.stringify(config),
+  });
+
+export const listarTiradas = (mapaId: number) =>
+  pedir<Tirada[]>(`/mapas/${mapaId}/tiradas`);
+
+export const tirarDados = (
+  mapaId: number,
+  datos: { expresion: string; autor?: string; motivo?: string },
+) => pedir<Tirada>(`/mapas/${mapaId}/tiradas`, { method: "POST", body: JSON.stringify(datos) });
+
+export const cambiarVida = (tokenId: number, delta: number) =>
+  pedir<Token>(`/tokens/${tokenId}/vida`, { method: "PUT", body: JSON.stringify({ delta }) });
+
+export const verCombate = (mapaId: number) =>
+  pedir<Combate | null>(`/mapas/${mapaId}/combate`);
+
+export const iniciarCombate = (mapaId: number) =>
+  pedir<Combate>(`/mapas/${mapaId}/combate/iniciar`, { method: "POST" });
+
+export const siguienteTurno = (mapaId: number) =>
+  pedir<Combate>(`/mapas/${mapaId}/combate/siguiente`, { method: "POST" });
+
+export const terminarCombate = (mapaId: number) =>
+  pedir<void>(`/mapas/${mapaId}/combate`, { method: "DELETE" });
+
 // ---------- Multijugador en tiempo real (WebSocket) ----------
 
 export type EventoMapa =
   | { tipo: "terreno"; datos: { cambios: { x: number; y: number; terreno: string }[] } }
   | { tipo: "token_colocado"; datos: Token }
   | { tipo: "token_movido"; datos: Token }
+  | { tipo: "token_actualizado"; datos: Token }
   | { tipo: "token_quitado"; datos: { id: number } }
+  | { tipo: "tirada"; datos: Tirada }
+  | { tipo: "combate"; datos: Combate }
+  | { tipo: "combate_terminado"; datos: { mapa_id: number } }
   | { tipo: "presencia"; datos: { conectados: number } };
 
 /**

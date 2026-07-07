@@ -176,6 +176,8 @@ class TokenSalida(BaseModel):
     es_monstruo: bool
     x: int
     y: int
+    vida_actual: int | None = None
+    vida_maxima: int | None = None
 
 
 class MapaDetalle(MapaSalida):
@@ -202,3 +204,62 @@ class TokenColocar(BaseModel):
 class TokenMover(BaseModel):
     x: int = Field(ge=0)
     y: int = Field(ge=0)
+
+
+class VidaCambio(BaseModel):
+    """Aplica daño (delta negativo) o curación (delta positivo) a un token."""
+
+    delta: int
+
+
+# ---------- Combate por turnos ----------
+
+class ConfigCombate(BaseModel):
+    """Ajustes del combate, editables por sistema. Vacío = por defecto."""
+
+    # Expresión (tipo fórmula) que da el modificador de iniciativa de cada ficha,
+    # ej. 'destreza' o 'iniciativa'. Vacío = sin modificador (solo el dado).
+    formula_iniciativa: str = ""
+    # Dado que se suma a la iniciativa al empezar el combate.
+    dado_iniciativa: str = "1d20"
+    # Clave de la estadística que marca la vida máxima, ej. 'vida_maxima'.
+    # Vacío = las fichas no llevan vida en el mapa.
+    estadistica_vida: str = ""
+
+
+class TiradaCrear(BaseModel):
+    expresion: str = Field(min_length=1, max_length=120)
+    autor: str = Field(default="", max_length=120)
+    motivo: str = Field(default="", max_length=200)
+
+
+class GrupoSalida(BaseModel):
+    cantidad: int
+    caras: int
+    valores: list[int]
+
+
+class TiradaSalida(BaseModel):
+    id: int
+    mapa_id: int
+    autor: str
+    motivo: str
+    expresion: str
+    grupos: list[GrupoSalida]
+    modificador: int
+    total: int
+    creada_en: str
+
+
+class Participante(BaseModel):
+    token_id: int
+    nombre: str
+    iniciativa: int
+
+
+class CombateSalida(BaseModel):
+    mapa_id: int
+    ronda: int
+    indice_turno: int
+    orden: list[Participante]
+    token_en_turno: int | None = None
