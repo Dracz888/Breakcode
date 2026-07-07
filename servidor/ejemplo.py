@@ -9,9 +9,14 @@ borrable y editable — es solo material de demostración.
 
 from app.database import Base, SesionLocal, engine
 from app.models import (
+    Arco,
+    Campana,
     DefinicionAtributo,
     DefinicionEstadistica,
+    Evento,
     Mapa,
+    MapaGeografico,
+    Marcador,
     Personaje,
     Sistema,
     Token,
@@ -117,9 +122,54 @@ db.add_all(
     ]
 )
 
+# Un mapa del mundo con tres lugares (usa fondo de pergamino, sin imagen).
+mundo = MapaGeografico(sistema_id=sistema.id, nombre="Continente de Aletheia")
+db.add(mundo)
+db.flush()
+puerto = Marcador(
+    mapa_id=mundo.id, nombre="Puerto Gris", tipo="ciudad",
+    descripcion="Ciudad portuaria envuelta en niebla.", x=0.28, y=0.42,
+)
+cripta = Marcador(
+    mapa_id=mundo.id, nombre="Cripta del Eco", tipo="mazmorra",
+    descripcion="Ruinas bajo el faro derruido.", x=0.62, y=0.66,
+)
+bosque = Marcador(
+    mapa_id=mundo.id, nombre="Soto de los Susurros", tipo="bosque",
+    descripcion="Arboleda donde el grupo acampó.", x=0.5, y=0.3,
+)
+db.add_all([puerto, cripta, bosque])
+db.flush()
+
+# Una campaña con un arco y dos eventos, para ver la línea de tiempo.
+campana = Campana(
+    sistema_id=sistema.id,
+    nombre="La caída del faro",
+    descripcion="La luz de Puerto Gris se apagó y algo despertó bajo las olas.",
+)
+db.add(campana)
+db.flush()
+arco = Arco(campana_id=campana.id, titulo="La sombra sobre el puerto", orden=0)
+db.add(arco)
+db.flush()
+evento1 = Evento(
+    arco_id=arco.id, orden=0, titulo="Emboscada en el muelle",
+    fecha="Día 3 del Ocaso", marcador_id=puerto.id,
+    descripcion="El grupo cae en una trampa nada más desembarcar.",
+    personajes=[kaelith],
+)
+evento2 = Evento(
+    arco_id=arco.id, orden=1, titulo="El descenso a la cripta",
+    fecha="Noche del Día 3", marcador_id=cripta.id,
+    descripcion="Siguiendo un rastro, Kaelith y el ogro se encuentran bajo el faro.",
+    personajes=[kaelith, ogro],
+)
+db.add_all([evento1, evento2])
+
 db.commit()
 print(
     f"Sistema de ejemplo creado (id {sistema.id}) con 6 atributos, 5 fórmulas, "
-    "2 fichas y 1 mapa de batalla."
+    "2 fichas, 1 mapa de batalla, 1 mapa del mundo con 3 lugares y "
+    "1 campaña con 1 arco y 2 eventos."
 )
 db.close()

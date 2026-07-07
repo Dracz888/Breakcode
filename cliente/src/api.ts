@@ -217,3 +217,179 @@ export const moverToken = (tokenId: number, x: number, y: number) =>
 
 export const quitarToken = (tokenId: number) =>
   pedir<void>(`/tokens/${tokenId}`, { method: "DELETE" });
+
+// ---------- Mapa geográfico (el mundo) ----------
+
+export interface TipoMarcador {
+  nombre: string;
+  color: string;
+  simbolo: string;
+}
+
+export interface Marcador {
+  id: number;
+  mapa_id: number;
+  nombre: string;
+  tipo: string;
+  descripcion: string;
+  x: number; // 0..1 relativo al ancho
+  y: number; // 0..1 relativo al alto
+}
+
+export interface MapaGeografico {
+  id: number;
+  sistema_id: number;
+  nombre: string;
+  imagen_url: string;
+}
+
+export interface MapaGeograficoDetalle extends MapaGeografico {
+  marcadores: Marcador[];
+}
+
+export const listarTiposMarcador = () =>
+  pedir<Record<string, TipoMarcador>>("/tipos-marcador");
+
+export const listarMundos = (sistemaId: number) =>
+  pedir<MapaGeografico[]>(`/sistemas/${sistemaId}/mapas-geograficos`);
+
+export const crearMundo = (
+  sistemaId: number,
+  datos: { nombre: string; imagen_url: string },
+) =>
+  pedir<MapaGeografico>(`/sistemas/${sistemaId}/mapas-geograficos`, {
+    method: "POST",
+    body: JSON.stringify(datos),
+  });
+
+export const verMundo = (id: number) =>
+  pedir<MapaGeograficoDetalle>(`/mapas-geograficos/${id}`);
+
+export const editarMundo = (
+  id: number,
+  datos: { nombre?: string; imagen_url?: string },
+) =>
+  pedir<MapaGeografico>(`/mapas-geograficos/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(datos),
+  });
+
+export const borrarMundo = (id: number) =>
+  pedir<void>(`/mapas-geograficos/${id}`, { method: "DELETE" });
+
+export const crearMarcador = (
+  mundoId: number,
+  datos: { nombre: string; tipo: string; descripcion: string; x: number; y: number },
+) =>
+  pedir<Marcador>(`/mapas-geograficos/${mundoId}/marcadores`, {
+    method: "POST",
+    body: JSON.stringify(datos),
+  });
+
+export const editarMarcador = (id: number, datos: Partial<Marcador>) =>
+  pedir<Marcador>(`/marcadores/${id}`, { method: "PUT", body: JSON.stringify(datos) });
+
+export const borrarMarcador = (id: number) =>
+  pedir<void>(`/marcadores/${id}`, { method: "DELETE" });
+
+// ---------- Campañas: arcos y eventos ----------
+
+export interface Campana {
+  id: number;
+  sistema_id: number;
+  nombre: string;
+  descripcion: string;
+}
+
+export interface PersonajeBreve {
+  id: number;
+  nombre: string;
+  es_monstruo: boolean;
+}
+
+export interface MarcadorBreve {
+  id: number;
+  nombre: string;
+  tipo: string;
+}
+
+export interface Evento {
+  id: number;
+  arco_id: number;
+  titulo: string;
+  fecha: string;
+  descripcion: string;
+  orden: number;
+  marcador: MarcadorBreve | null;
+  personajes: PersonajeBreve[];
+}
+
+export interface Arco {
+  id: number;
+  campana_id: number;
+  titulo: string;
+  descripcion: string;
+  orden: number;
+  eventos: Evento[];
+}
+
+export interface CampanaDetalle extends Campana {
+  arcos: Arco[];
+}
+
+export const listarCampanas = (sistemaId: number) =>
+  pedir<Campana[]>(`/sistemas/${sistemaId}/campanas`);
+
+export const crearCampana = (
+  sistemaId: number,
+  datos: { nombre: string; descripcion: string },
+) =>
+  pedir<Campana>(`/sistemas/${sistemaId}/campanas`, {
+    method: "POST",
+    body: JSON.stringify(datos),
+  });
+
+export const verCampana = (id: number) => pedir<CampanaDetalle>(`/campanas/${id}`);
+
+export const editarCampana = (
+  id: number,
+  datos: { nombre?: string; descripcion?: string },
+) => pedir<Campana>(`/campanas/${id}`, { method: "PUT", body: JSON.stringify(datos) });
+
+export const borrarCampana = (id: number) =>
+  pedir<void>(`/campanas/${id}`, { method: "DELETE" });
+
+export const crearArco = (campanaId: number, datos: { titulo: string; descripcion: string }) =>
+  pedir<Arco>(`/campanas/${campanaId}/arcos`, { method: "POST", body: JSON.stringify(datos) });
+
+export const editarArco = (
+  id: number,
+  datos: { titulo?: string; descripcion?: string; orden?: number },
+) => pedir<Arco>(`/arcos/${id}`, { method: "PUT", body: JSON.stringify(datos) });
+
+export const borrarArco = (id: number) => pedir<void>(`/arcos/${id}`, { method: "DELETE" });
+
+export const crearEvento = (
+  arcoId: number,
+  datos: {
+    titulo: string;
+    fecha: string;
+    descripcion: string;
+    marcador_id: number | null;
+    personajes: number[];
+  },
+) => pedir<Evento>(`/arcos/${arcoId}/eventos`, { method: "POST", body: JSON.stringify(datos) });
+
+export const editarEvento = (
+  id: number,
+  datos: {
+    titulo?: string;
+    fecha?: string;
+    descripcion?: string;
+    marcador_id?: number | null;
+    personajes?: number[];
+  },
+) => pedir<Evento>(`/eventos/${id}`, { method: "PUT", body: JSON.stringify(datos) });
+
+export const borrarEvento = (id: number) =>
+  pedir<void>(`/eventos/${id}`, { method: "DELETE" });

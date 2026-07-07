@@ -202,3 +202,145 @@ class TokenColocar(BaseModel):
 class TokenMover(BaseModel):
     x: int = Field(ge=0)
     y: int = Field(ge=0)
+
+
+# ---------- Mapa geográfico (el mundo) ----------
+
+class MapaGeograficoCrear(BaseModel):
+    nombre: str = Field(min_length=1, max_length=120)
+    imagen_url: str = ""
+
+
+class MapaGeograficoEditar(BaseModel):
+    nombre: str | None = Field(default=None, min_length=1, max_length=120)
+    imagen_url: str | None = None
+
+
+class MapaGeograficoSalida(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    sistema_id: int
+    nombre: str
+    imagen_url: str
+
+
+class MarcadorCrear(BaseModel):
+    nombre: str = Field(min_length=1, max_length=120)
+    tipo: str = "punto"
+    descripcion: str = ""
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+
+
+class MarcadorEditar(BaseModel):
+    nombre: str | None = Field(default=None, min_length=1, max_length=120)
+    tipo: str | None = None
+    descripcion: str | None = None
+    x: float | None = Field(default=None, ge=0, le=1)
+    y: float | None = Field(default=None, ge=0, le=1)
+
+
+class MarcadorSalida(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    mapa_id: int
+    nombre: str
+    tipo: str
+    descripcion: str
+    x: float
+    y: float
+
+
+class MapaGeograficoDetalle(MapaGeograficoSalida):
+    marcadores: list[MarcadorSalida]
+
+
+# ---------- Campañas: arcos y eventos ----------
+
+class CampanaCrear(BaseModel):
+    nombre: str = Field(min_length=1, max_length=120)
+    descripcion: str = ""
+
+
+class CampanaEditar(BaseModel):
+    nombre: str | None = Field(default=None, min_length=1, max_length=120)
+    descripcion: str | None = None
+
+
+class CampanaSalida(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    sistema_id: int
+    nombre: str
+    descripcion: str
+
+
+class ArcoCrear(BaseModel):
+    titulo: str = Field(min_length=1, max_length=160)
+    descripcion: str = ""
+
+
+class ArcoEditar(BaseModel):
+    titulo: str | None = Field(default=None, min_length=1, max_length=160)
+    descripcion: str | None = None
+    orden: int | None = None
+
+
+class EventoCrear(BaseModel):
+    titulo: str = Field(min_length=1, max_length=160)
+    fecha: str = ""
+    descripcion: str = ""
+    marcador_id: int | None = None
+    personajes: list[int] = []
+
+
+class EventoEditar(BaseModel):
+    titulo: str | None = Field(default=None, min_length=1, max_length=160)
+    fecha: str | None = None
+    descripcion: str | None = None
+    orden: int | None = None
+    marcador_id: int | None = None
+    personajes: list[int] | None = None
+
+
+class PersonajeBreve(BaseModel):
+    """Ficha resumida para listar los involucrados en un evento."""
+
+    id: int
+    nombre: str
+    es_monstruo: bool
+
+
+class MarcadorBreve(BaseModel):
+    id: int
+    nombre: str
+    tipo: str
+
+
+class EventoSalida(BaseModel):
+    id: int
+    arco_id: int
+    titulo: str
+    fecha: str
+    descripcion: str
+    orden: int
+    marcador: MarcadorBreve | None
+    personajes: list[PersonajeBreve]
+
+
+class ArcoSalida(BaseModel):
+    id: int
+    campana_id: int
+    titulo: str
+    descripcion: str
+    orden: int
+    eventos: list[EventoSalida]
+
+
+class CampanaDetalle(CampanaSalida):
+    """La campaña completa: sus arcos y eventos en orden (la línea de tiempo)."""
+
+    arcos: list[ArcoSalida]
