@@ -1,11 +1,12 @@
 """Rutas del mapa de batalla: pintar terreno, colocar y mover fichas."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..database import obtener_db
 from ..terrenos import TERRENO_INICIAL, TERRENOS, bloquea
+from ..tiempo_real import gestor
 
 router = APIRouter(tags=["Mapas de batalla"])
 
@@ -59,6 +60,24 @@ def _validar_destino(mapa: models.Mapa, x: int, y: int, ignorar_token: int | Non
 @router.get("/terrenos")
 def listar_terrenos() -> dict[str, dict]:
     return TERRENOS
+
+
+# ---------- Sala en tiempo real (multijugador) ----------
+
+@router.websocket("/ws/mapas/{mapa_id}")
+async def sala_del_mapa(websocket: WebSocket, mapa_id: int):
+    """Deja la línea abierta con quien tiene este mapa en pantalla.
+
+    El cliente solo escucha las novedades que reparte el servidor; cualquier
+    cosa que envíe se ignora (los cambios reales viajan por las rutas REST, que
+    validan y luego avisan a toda la sala).
+    """
+    await gestor.conectar(mapa_id, websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        gestor.desconectar(mapa_id, websocket)
 
 
 # ---------- Mapas ----------
@@ -121,6 +140,7 @@ def pintar_celdas(
     mapa.celdas = celdas
     db.commit()
     db.refresh(mapa)
+    gestor.anunciar(mapa.id, "terreno", {"cambios": [c.model_dump() for c in datos.cambios]})
     return _mapa_a_detalle(mapa)
 
 
@@ -144,7 +164,9 @@ def colocar_token(
     db.add(token)
     db.commit()
     db.refresh(token)
-    return _token_a_salida(token)
+    salida = _token_a_salida(token)
+    gestor.anunciar(mapa.id, "token_colocado", salida.model_dump())
+    return salida
 
 
 @router.put("/tokens/{token_id}", response_model=schemas.TokenSalida)
@@ -157,7 +179,9 @@ def mover_token(token_id: int, datos: schemas.TokenMover, db: Session = Depends(
     token.y = datos.y
     db.commit()
     db.refresh(token)
-    return _token_a_salida(token)
+    salida = _token_a_salida(token)
+    gestor.anunciar(token.mapa_id, "token_movido", salida.model_dump())
+    return salida
 
 
 @router.delete("/tokens/{token_id}", status_code=204)
@@ -165,5 +189,7 @@ def quitar_token(token_id: int, db: Session = Depends(obtener_db)):
     token = db.get(models.Token, token_id)
     if token is None:
         raise HTTPException(404, "Esa ficha no está en el mapa")
+    mapa_id = token.mapa_id
     db.delete(token)
     db.commit()
+    gestor.anunciar(mapa_id, "token_quitado", {"id": token_id})

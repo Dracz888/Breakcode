@@ -62,6 +62,11 @@ html, body {
   width: 100%;
 }
 
+.cabecera .subtitulo .conectados {
+  color: var(--verde);
+  font-weight: 600;
+}
+
 .boton-volver {
   background: none;
   border: 1px solid var(--borde);

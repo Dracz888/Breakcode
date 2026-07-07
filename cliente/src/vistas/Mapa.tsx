@@ -20,6 +20,7 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
   const [terrenoSel, setTerrenoSel] = useState("pasto");
   const [tokenSel, setTokenSel] = useState<number | null>(null);
   const [colocando, setColocando] = useState<number | null>(null);
+  const [conectados, setConectados] = useState(1);
   const [error, setError] = useState("");
 
   const lienzo = useRef<HTMLCanvasElement>(null);
@@ -33,6 +34,52 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
     api.listarTerrenos().then(setTerrenos).catch((e) => setError(e.message));
     api.listarPersonajes(sistemaId).then(setPersonajes).catch((e) => setError(e.message));
   }, [mapaId, sistemaId]);
+
+  // ---------- Multijugador: escuchar los cambios de los demás ----------
+
+  useEffect(() => {
+    const cerrarSala = api.conectarMapa(
+      mapaId,
+      (evento) => {
+        if (evento.tipo === "presencia") {
+          setConectados(evento.datos.conectados);
+          return;
+        }
+        if (evento.tipo === "token_quitado") {
+          const idQuitado = evento.datos.id;
+          setTokenSel((sel) => (sel === idQuitado ? null : sel));
+        }
+        setMapa((prev) => {
+          if (!prev) return prev;
+          switch (evento.tipo) {
+            case "terreno": {
+              const celdas = prev.celdas.map((fila) => fila.slice());
+              for (const c of evento.datos.cambios) {
+                if (celdas[c.y] && c.x >= 0 && c.x < celdas[c.y].length) celdas[c.y][c.x] = c.terreno;
+              }
+              return { ...prev, celdas };
+            }
+            case "token_colocado":
+            case "token_movido": {
+              const token = evento.datos;
+              const tokens = prev.tokens.some((t) => t.id === token.id)
+                ? prev.tokens.map((t) => (t.id === token.id ? token : t))
+                : [...prev.tokens, token];
+              return { ...prev, tokens };
+            }
+            case "token_quitado":
+              return { ...prev, tokens: prev.tokens.filter((t) => t.id !== evento.datos.id) };
+            default:
+              return prev;
+          }
+        });
+      },
+      // Al reconectar tras una caída, volvemos a pedir el mapa completo por si
+      // se perdió algún cambio mientras la línea estuvo cortada.
+      () => api.verMapa(mapaId).then(setMapa).catch(() => undefined),
+    );
+    return cerrarSala;
+  }, [mapaId]);
 
   // ---------- Dibujo ----------
 
@@ -217,6 +264,7 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
         <h1>{mapa.nombre}</h1>
         <span className="subtitulo">
           {mapa.ancho} × {mapa.alto} celdas
+          {conectados > 1 && <span className="conectados"> · 👥 {conectados} conectados</span>}
         </span>
       </header>
 

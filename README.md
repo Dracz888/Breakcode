@@ -15,6 +15,7 @@ servidor/        El cerebro: API en Python (FastAPI) — Fase 1
     formulas.py    Motor de fórmulas tipo Excel (simpleeval)
     models.py      Tablas: sistemas, atributos, estadísticas, personajes
     schemas.py     Validación de datos de entrada/salida
+    tiempo_real.py Salas multijugador por WebSocket — Fase 4
     routers/       Las operaciones de la API
   tests/           Pruebas automáticas
   ejemplo.py       Carga un sistema de demostración
@@ -42,6 +43,13 @@ uvicorn app.main:app --reload
 Luego abre `http://localhost:8000` — la aplicación completa, usable desde
 PC o celular. En `http://localhost:8000/docs` sigue estando la pantalla
 técnica de pruebas de la API.
+
+### Probar el multijugador (Fase 4)
+
+Abre el mismo mapa de batalla en dos ventanas (o en tu PC y tu celular en la
+misma red). Al pintar terreno o mover una ficha en una, la otra lo ve al
+instante: el servidor reparte cada cambio a todos los conectados por WebSocket.
+La cabecera del mapa muestra cuántas personas están mirándolo.
 
 ## Cómo correr las pruebas
 

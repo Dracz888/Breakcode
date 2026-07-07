@@ -217,3 +217,59 @@ export const moverToken = (tokenId: number, x: number, y: number) =>
 
 export const quitarToken = (tokenId: number) =>
   pedir<void>(`/tokens/${tokenId}`, { method: "DELETE" });
+
+// ---------- Multijugador en tiempo real (WebSocket) ----------
+
+export type EventoMapa =
+  | { tipo: "terreno"; datos: { cambios: { x: number; y: number; terreno: string }[] } }
+  | { tipo: "token_colocado"; datos: Token }
+  | { tipo: "token_movido"; datos: Token }
+  | { tipo: "token_quitado"; datos: { id: number } }
+  | { tipo: "presencia"; datos: { conectados: number } };
+
+/**
+ * Abre la sala del mapa: escucha las novedades que reparte el servidor y las
+ * entrega a `manejar`. Si la conexión se cae, reintenta sola cada 2 s; al
+ * reconectar llama a `alReconectar` para que la pantalla vuelva a sincronizarse
+ * (por si se perdió algún cambio mientras estaba desconectada).
+ *
+ * Devuelve una función para cerrar la sala al salir de la pantalla.
+ */
+export function conectarMapa(
+  mapaId: number,
+  manejar: (evento: EventoMapa) => void,
+  alReconectar?: () => void,
+): () => void {
+  let socket: WebSocket | null = null;
+  let cerrado = false;
+  let reintento: ReturnType<typeof setTimeout> | undefined;
+  let primeraConexion = true;
+
+  function abrir() {
+    const protocolo = location.protocol === "https:" ? "wss:" : "ws:";
+    socket = new WebSocket(`${protocolo}//${location.host}/ws/mapas/${mapaId}`);
+
+    socket.onopen = () => {
+      if (!primeraConexion) alReconectar?.();
+      primeraConexion = false;
+    };
+    socket.onmessage = (mensaje) => {
+      try {
+        manejar(JSON.parse(mensaje.data) as EventoMapa);
+      } catch {
+        /* mensaje ilegible: se ignora */
+      }
+    };
+    socket.onclose = () => {
+      if (!cerrado) reintento = setTimeout(abrir, 2000);
+    };
+  }
+
+  abrir();
+
+  return () => {
+    cerrado = true;
+    clearTimeout(reintento);
+    socket?.close();
+  };
+}
