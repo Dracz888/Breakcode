@@ -23,6 +23,7 @@ def _con_estadisticas(personaje: models.Personaje) -> schemas.PersonajeConEstadi
         nivel=personaje.nivel,
         es_monstruo=personaje.es_monstruo,
         atributos=personaje.atributos,
+        voz_id=personaje.voz_id,
         estadisticas=valores,
         errores_de_formulas=errores,
     )
@@ -100,6 +101,10 @@ def editar_personaje(
     if "atributos" in cambios:
         _validar_atributos(personaje.sistema, cambios["atributos"])
         cambios["atributos"] = {**personaje.atributos, **cambios["atributos"]}
+    if cambios.get("voz_id") is not None:
+        voz = db.get(models.Voz, cambios["voz_id"])
+        if voz is None or voz.sistema_id != personaje.sistema_id:
+            raise HTTPException(422, "Esa voz no existe en el sistema de la ficha")
     for campo, valor in cambios.items():
         setattr(personaje, campo, valor)
     db.commit()

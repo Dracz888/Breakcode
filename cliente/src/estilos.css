@@ -332,6 +332,20 @@ input:focus, textarea:focus { outline: 2px solid var(--dorado); outline-offset: 
   flex-shrink: 0;
 }
 
+/* ---------- Voces / narración ---------- */
+
+.narracion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--borde);
+  flex-wrap: wrap;
+}
+
+.narracion:last-child { border-bottom: none; }
+.narracion .nota { display: block; margin-top: 2px; font-style: italic; }
+
 @media (min-width: 720px) {
   .mapa-disposicion { grid-template-columns: 1fr 260px; align-items: start; }
   .paleta-terrenos { flex-direction: column; }

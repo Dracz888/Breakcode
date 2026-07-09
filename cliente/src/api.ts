@@ -34,6 +34,7 @@ export interface Personaje {
   nivel: number;
   es_monstruo: boolean;
   atributos: Record<string, number>;
+  voz_id: number | null;
   estadisticas: Record<string, number>;
   errores_de_formulas: Record<string, string>;
 }
@@ -148,7 +149,12 @@ export const crearPersonaje = (
 
 export const editarPersonaje = (
   id: number,
-  datos: { nombre?: string; nivel?: number; atributos?: Record<string, number> },
+  datos: {
+    nombre?: string;
+    nivel?: number;
+    atributos?: Record<string, number>;
+    voz_id?: number | null;
+  },
 ) => pedir<Personaje>(`/personajes/${id}`, { method: "PUT", body: JSON.stringify(datos) });
 
 export const borrarPersonaje = (id: number) =>
@@ -217,3 +223,78 @@ export const moverToken = (tokenId: number, x: number, y: number) =>
 
 export const quitarToken = (tokenId: number) =>
   pedir<void>(`/tokens/${tokenId}`, { method: "DELETE" });
+
+// ---------- Voces ----------
+
+export interface Voz {
+  id: number;
+  sistema_id: number;
+  nombre: string;
+  descripcion: string;
+  voz_externa_id: string;
+  ajustes: Record<string, unknown>;
+}
+
+export interface VozSugerida {
+  voz_externa_id: string;
+  nombre: string;
+  descripcion: string;
+  genero: string;
+}
+
+export interface EstadoVoces {
+  hay_api: boolean;
+  sugeridas: VozSugerida[];
+  max_caracteres: number;
+}
+
+export interface Narracion {
+  id: number;
+  sistema_id: number;
+  personaje_id: number | null;
+  voz_id: number | null;
+  nombre_locutor: string;
+  texto: string;
+  tipo_mime: string;
+  es_demostracion: boolean;
+  creada_en: string;
+}
+
+export const estadoVoces = () => pedir<EstadoVoces>("/voces/estado");
+
+export const listarVoces = (sistemaId: number) =>
+  pedir<Voz[]>(`/sistemas/${sistemaId}/voces`);
+
+export const crearVoz = (
+  sistemaId: number,
+  datos: { nombre: string; descripcion: string; voz_externa_id: string },
+) =>
+  pedir<Voz>(`/sistemas/${sistemaId}/voces`, {
+    method: "POST",
+    body: JSON.stringify(datos),
+  });
+
+export const editarVoz = (vozId: number, datos: Partial<Voz>) =>
+  pedir<Voz>(`/voces/${vozId}`, { method: "PUT", body: JSON.stringify(datos) });
+
+export const borrarVoz = (vozId: number) =>
+  pedir<void>(`/voces/${vozId}`, { method: "DELETE" });
+
+export const listarNarraciones = (sistemaId: number) =>
+  pedir<Narracion[]>(`/sistemas/${sistemaId}/narraciones`);
+
+export const narrar = (
+  sistemaId: number,
+  datos: { texto: string; personaje_id?: number; voz_id?: number },
+) =>
+  pedir<Narracion>(`/sistemas/${sistemaId}/narrar`, {
+    method: "POST",
+    body: JSON.stringify(datos),
+  });
+
+export const borrarNarracion = (narracionId: number) =>
+  pedir<void>(`/narraciones/${narracionId}`, { method: "DELETE" });
+
+/** Dirección del audio de una narración, lista para un <audio src>. */
+export const audioDeNarracion = (narracionId: number) =>
+  `/narraciones/${narracionId}/audio`;

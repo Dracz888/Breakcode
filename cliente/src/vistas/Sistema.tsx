@@ -2,8 +2,9 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import * as api from "../api";
 import type { Pantalla } from "../App";
 import EditorFormula, { aClave } from "../componentes/EditorFormula";
+import Narrador from "../componentes/Narrador";
 
-type PestanaId = "atributos" | "formulas" | "fichas" | "mapas";
+type PestanaId = "atributos" | "formulas" | "fichas" | "mapas" | "voces";
 
 interface Props {
   sistemaId: number;
@@ -59,6 +60,7 @@ export default function VistaSistema({ sistemaId, navegar }: Props) {
             ["formulas", "Fórmulas"],
             ["fichas", "Fichas"],
             ["mapas", "Mapas"],
+            ["voces", "Voces"],
           ] as [PestanaId, string][]
         ).map(([id, titulo]) => (
           <button
@@ -89,6 +91,173 @@ export default function VistaSistema({ sistemaId, navegar }: Props) {
       )}
       {pestana === "mapas" && (
         <PestanaMapas sistema={sistema} navegar={navegar} setError={setError} />
+      )}
+      {pestana === "voces" && <PestanaVoces sistema={sistema} setError={setError} />}
+    </>
+  );
+}
+
+// ---------- Pestaña: Voces ----------
+
+function PestanaVoces({
+  sistema,
+  setError,
+}: {
+  sistema: api.SistemaDetalle;
+  setError: (m: string) => void;
+}) {
+  const [voces, setVoces] = useState<api.Voz[]>([]);
+  const [estado, setEstado] = useState<api.EstadoVoces | null>(null);
+  const [nombre, setNombre] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [vozExterna, setVozExterna] = useState("");
+
+  const recargar = useCallback(
+    () =>
+      api
+        .listarVoces(sistema.id)
+        .then(setVoces)
+        .catch((e) => setError(e.message)),
+    [sistema.id, setError],
+  );
+
+  useEffect(() => {
+    recargar();
+    api.estadoVoces().then(setEstado).catch((e) => setError(e.message));
+  }, [recargar, setError]);
+
+  async function crear(evento: FormEvent) {
+    evento.preventDefault();
+    setError("");
+    try {
+      await api.crearVoz(sistema.id, {
+        nombre,
+        descripcion,
+        voz_externa_id: vozExterna.trim(),
+      });
+      setNombre("");
+      setDescripcion("");
+      setVozExterna("");
+      await recargar();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function borrar(voz: api.Voz) {
+    if (!confirm(`¿Borrar la voz "${voz.nombre}"? Los personajes que la usen quedarán sin voz.`))
+      return;
+    setError("");
+    try {
+      await api.borrarVoz(voz.id);
+      await recargar();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  // Al elegir una voz sugerida se rellena el formulario para no copiar ids a mano.
+  function usarSugerida(clave: string) {
+    const s = estado?.sugeridas.find((v) => v.voz_externa_id === clave);
+    if (!s) return;
+    setVozExterna(s.voz_externa_id);
+    if (!nombre) setNombre(s.nombre);
+    if (!descripcion) setDescripcion(s.descripcion);
+  }
+
+  return (
+    <>
+      <div className="dos-columnas">
+        <div>
+          {voces.length === 0 && (
+            <p className="nota">
+              Una voz guarda una descripción («ogro grave y monstruoso») y su timbre de
+              ElevenLabs. Después se la asignas a un personaje desde su ficha. Crea la
+              primera al lado.
+            </p>
+          )}
+          {voces.map((v) => (
+            <div key={v.id} className="tarjeta">
+              <div className="fila">
+                <div className="espacio">
+                  <h3>{v.nombre}</h3>
+                  {v.descripcion && <p className="descripcion">{v.descripcion}</p>}
+                  <span className="nota">
+                    voz: <code>{v.voz_externa_id}</code>
+                  </span>
+                </div>
+                <button className="boton boton-peligro" onClick={() => borrar(v)}>
+                  Borrar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="tarjeta">
+          <h3>Nueva voz</h3>
+          <form onSubmit={crear}>
+            <label className="campo">
+              <span>Nombre</span>
+              <input
+                type="text"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="Ej. Ogro cavernario"
+                required
+              />
+            </label>
+            <label className="campo">
+              <span>Descripción del timbre</span>
+              <input
+                type="text"
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+                placeholder="Ej. grave, monstruoso, arrastra las palabras"
+              />
+            </label>
+            <label className="campo">
+              <span>Identificador de voz (ElevenLabs)</span>
+              <input
+                type="text"
+                value={vozExterna}
+                onChange={(e) => setVozExterna(e.target.value)}
+                placeholder="Elige una sugerida abajo o pega el tuyo"
+                required
+              />
+            </label>
+            {estado && estado.sugeridas.length > 0 && (
+              <>
+                <span className="nota">Voces sugeridas (haz clic para usar una):</span>
+                <div className="paleta-claves">
+                  {estado.sugeridas.map((s) => (
+                    <button
+                      key={s.voz_externa_id}
+                      type="button"
+                      className="chip-clave"
+                      title={s.descripcion}
+                      onClick={() => usarSugerida(s.voz_externa_id)}
+                    >
+                      {s.nombre}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            <button className="boton" type="submit">
+              Crear voz
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {estado && (
+        <Narrador
+          sistemaId={sistema.id}
+          voces={voces}
+          hayApi={estado.hay_api}
+          maxCaracteres={estado.max_caracteres}
+        />
       )}
     </>
   );

@@ -5,6 +5,7 @@ identificadores simples: minúsculas, sin espacios ni acentos, ej. 'voluntad_arc
 """
 
 import re
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -130,6 +131,9 @@ class PersonajeEditar(BaseModel):
     nombre: str | None = None
     nivel: int | None = Field(default=None, ge=1)
     atributos: dict[str, float] | None = None
+    # Se envía null para quitarle la voz; un id para asignársela. Si no se
+    # incluye el campo, la voz queda como estaba.
+    voz_id: int | None = None
 
 
 class PersonajeSalida(BaseModel):
@@ -141,6 +145,7 @@ class PersonajeSalida(BaseModel):
     nivel: int
     es_monstruo: bool
     atributos: dict[str, float]
+    voz_id: int | None = None
 
 
 class PersonajeConEstadisticas(PersonajeSalida):
@@ -202,3 +207,68 @@ class TokenColocar(BaseModel):
 class TokenMover(BaseModel):
     x: int = Field(ge=0)
     y: int = Field(ge=0)
+
+
+# ---------- Voces (Módulo 5) ----------
+
+class VozCrear(BaseModel):
+    nombre: str = Field(min_length=1, max_length=120)
+    descripcion: str = ""
+    voz_externa_id: str = Field(min_length=1, max_length=120)
+    ajustes: dict = {}
+
+
+class VozEditar(BaseModel):
+    nombre: str | None = None
+    descripcion: str | None = None
+    voz_externa_id: str | None = None
+    ajustes: dict | None = None
+
+
+class VozSalida(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    sistema_id: int
+    nombre: str
+    descripcion: str
+    voz_externa_id: str
+    ajustes: dict
+
+
+class VozSugerida(BaseModel):
+    voz_externa_id: str
+    nombre: str
+    descripcion: str
+    genero: str
+
+
+class EstadoVoces(BaseModel):
+    """Cómo está el módulo de voces: con ElevenLabs real o en demostración."""
+
+    hay_api: bool
+    sugeridas: list[VozSugerida]
+    max_caracteres: int
+
+
+# ---------- Narración (audio compartido) ----------
+
+class NarracionCrear(BaseModel):
+    texto: str = Field(min_length=1)
+    # Se narra con la voz de un personaje o con una voz del catálogo directamente.
+    personaje_id: int | None = None
+    voz_id: int | None = None
+
+
+class NarracionSalida(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    sistema_id: int
+    personaje_id: int | None
+    voz_id: int | None
+    nombre_locutor: str
+    texto: str
+    tipo_mime: str
+    es_demostracion: bool
+    creada_en: datetime

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../api";
 import type { Pantalla } from "../App";
 
@@ -128,6 +128,12 @@ export default function VistaFicha({ personajeId, sistemaId, navegar }: Props) {
             </div>
           ))}
         </div>
+
+        <VozDelPersonaje
+          personaje={personaje}
+          onCambiar={setPersonaje}
+          setError={setError}
+        />
       </div>
 
       <div style={{ marginTop: 20 }}>
@@ -136,5 +142,119 @@ export default function VistaFicha({ personajeId, sistemaId, navegar }: Props) {
         </button>
       </div>
     </>
+  );
+}
+
+// ---------- Voz del personaje: asignar una voz y hablar con ella ----------
+
+function VozDelPersonaje({
+  personaje,
+  onCambiar,
+  setError,
+}: {
+  personaje: api.Personaje;
+  onCambiar: (p: api.Personaje) => void;
+  setError: (m: string) => void;
+}) {
+  const [voces, setVoces] = useState<api.Voz[]>([]);
+  const [estado, setEstado] = useState<api.EstadoVoces | null>(null);
+  const [texto, setTexto] = useState("");
+  const [generando, setGenerando] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    api.listarVoces(personaje.sistema_id).then(setVoces).catch((e) => setError(e.message));
+    api.estadoVoces().then(setEstado).catch((e) => setError(e.message));
+  }, [personaje.sistema_id, setError]);
+
+  async function asignar(vozId: number | null) {
+    setError("");
+    try {
+      onCambiar(await api.editarPersonaje(personaje.id, { voz_id: vozId }));
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function hablar(evento: FormEvent) {
+    evento.preventDefault();
+    setError("");
+    setGenerando(true);
+    try {
+      const narracion = await api.narrar(personaje.sistema_id, {
+        texto,
+        personaje_id: personaje.id,
+      });
+      setTexto("");
+      const audio = audioRef.current;
+      if (audio) {
+        audio.src = api.audioDeNarracion(narracion.id);
+        audio.play().catch(() => {});
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setGenerando(false);
+    }
+  }
+
+  const maxCaracteres = estado?.max_caracteres ?? 800;
+
+  return (
+    <div className="tarjeta">
+      <h3>Voz</h3>
+      {voces.length === 0 ? (
+        <p className="nota">
+          Este sistema aún no tiene voces. Créalas en la pestaña «Voces» del sistema para
+          poder darle una a este personaje.
+        </p>
+      ) : (
+        <>
+          <label className="campo">
+            <span>Voz de {personaje.nombre}</span>
+            <select
+              value={personaje.voz_id ?? ""}
+              onChange={(e) =>
+                asignar(e.target.value === "" ? null : Number(e.target.value))
+              }
+            >
+              <option value="">— Sin voz —</option>
+              {voces.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {personaje.voz_id != null && (
+            <form onSubmit={hablar} style={{ marginTop: 8 }}>
+              <label className="campo">
+                <span>
+                  Hacer hablar a {personaje.nombre} ({texto.length}/{maxCaracteres})
+                </span>
+                <textarea
+                  value={texto}
+                  onChange={(e) => setTexto(e.target.value.slice(0, maxCaracteres))}
+                  placeholder="Ej. ¡Que tiemblen mis enemigos!"
+                  rows={3}
+                  required
+                />
+              </label>
+              <button className="boton" type="submit" disabled={generando || !texto.trim()}>
+                {generando ? "Generando…" : "Hablar y reproducir"}
+              </button>
+              {estado && !estado.hay_api && (
+                <p className="nota" style={{ marginTop: 6 }}>
+                  Modo demostración: el audio es un tono de relleno hasta configurar
+                  ElevenLabs.
+                </p>
+              )}
+            </form>
+          )}
+          <audio ref={audioRef} />
+        </>
+      )}
+    </div>
   );
 }
