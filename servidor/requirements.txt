@@ -2,5 +2,6 @@ fastapi
 uvicorn
 sqlalchemy
 simpleeval
+python-multipart
 pytest
 httpx

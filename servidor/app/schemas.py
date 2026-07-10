@@ -272,3 +272,28 @@ class NarracionSalida(BaseModel):
     tipo_mime: str
     es_demostracion: bool
     creada_en: datetime
+
+
+# ---------- Ambientes de sonido (Módulo 5.7) ----------
+
+class AmbienteIntegrado(BaseModel):
+    clave: str
+    nombre: str
+    categoria: str
+    icono: str
+    descripcion: str
+    bucle: bool
+
+
+class AmbienteSalida(BaseModel):
+    """Un ambiente subido por el DJ (sin los bytes de audio, que van aparte)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    sistema_id: int
+    nombre: str
+    categoria: str
+    icono: str
+    tipo_mime: str
+    bucle: bool

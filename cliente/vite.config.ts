@@ -6,9 +6,17 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: {
-      "/sistemas": "http://localhost:8000",
-      "/personajes": "http://localhost:8000",
-    },
+    proxy: Object.fromEntries(
+      [
+        "/sistemas",
+        "/personajes",
+        "/terrenos",
+        "/mapas",
+        "/tokens",
+        "/voces",
+        "/narraciones",
+        "/ambientes",
+      ].map((ruta) => [ruta, "http://localhost:8000"]),
+    ),
   },
 });

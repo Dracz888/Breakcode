@@ -3,8 +3,15 @@ import * as api from "../api";
 import type { Pantalla } from "../App";
 import EditorFormula, { aClave } from "../componentes/EditorFormula";
 import Narrador from "../componentes/Narrador";
+import MesaDeSonido from "../componentes/MesaDeSonido";
 
-type PestanaId = "atributos" | "formulas" | "fichas" | "mapas" | "voces";
+type PestanaId =
+  | "atributos"
+  | "formulas"
+  | "fichas"
+  | "mapas"
+  | "voces"
+  | "ambientes";
 
 interface Props {
   sistemaId: number;
@@ -61,6 +68,7 @@ export default function VistaSistema({ sistemaId, navegar }: Props) {
             ["fichas", "Fichas"],
             ["mapas", "Mapas"],
             ["voces", "Voces"],
+            ["ambientes", "Ambientes"],
           ] as [PestanaId, string][]
         ).map(([id, titulo]) => (
           <button
@@ -93,6 +101,9 @@ export default function VistaSistema({ sistemaId, navegar }: Props) {
         <PestanaMapas sistema={sistema} navegar={navegar} setError={setError} />
       )}
       {pestana === "voces" && <PestanaVoces sistema={sistema} setError={setError} />}
+      {pestana === "ambientes" && (
+        <MesaDeSonido sistemaId={sistema.id} setError={setError} />
+      )}
     </>
   );
 }

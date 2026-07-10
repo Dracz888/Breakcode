@@ -48,6 +48,9 @@ class Sistema(Base):
     narraciones: Mapped[list["Narracion"]] = relationship(
         back_populates="sistema", cascade="all, delete-orphan"
     )
+    ambientes: Mapped[list["Ambiente"]] = relationship(
+        back_populates="sistema", cascade="all, delete-orphan"
+    )
 
 
 class DefinicionAtributo(Base):
@@ -188,3 +191,25 @@ class Narracion(Base):
     )
 
     sistema: Mapped[Sistema] = relationship(back_populates="narraciones")
+
+
+class Ambiente(Base):
+    """Un sonido de fondo subido por el DJ a la mesa de sonido (Módulo 5.7).
+
+    Los ambientes integrados se sintetizan en el servidor y no viven aquí; esta
+    tabla guarda solo las grabaciones propias que el DJ sube (una taberna real,
+    una pista de música…). El audio se guarda en la base de datos.
+    """
+
+    __tablename__ = "ambientes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    sistema_id: Mapped[int] = mapped_column(ForeignKey("sistemas.id"))
+    nombre: Mapped[str] = mapped_column(String(120))
+    categoria: Mapped[str] = mapped_column(String(60), default="Propios")
+    icono: Mapped[str] = mapped_column(String(8), default="🎵")
+    audio: Mapped[bytes] = mapped_column(LargeBinary)
+    tipo_mime: Mapped[str] = mapped_column(String(40), default="audio/mpeg")
+    bucle: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    sistema: Mapped[Sistema] = relationship(back_populates="ambientes")

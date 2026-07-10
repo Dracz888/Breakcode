@@ -298,3 +298,58 @@ export const borrarNarracion = (narracionId: number) =>
 /** Dirección del audio de una narración, lista para un <audio src>. */
 export const audioDeNarracion = (narracionId: number) =>
   `/narraciones/${narracionId}/audio`;
+
+// ---------- Ambientes de sonido ----------
+
+export interface AmbienteIntegrado {
+  clave: string;
+  nombre: string;
+  categoria: string;
+  icono: string;
+  descripcion: string;
+  bucle: boolean;
+}
+
+export interface Ambiente {
+  id: number;
+  sistema_id: number;
+  nombre: string;
+  categoria: string;
+  icono: string;
+  tipo_mime: string;
+  bucle: boolean;
+}
+
+export const listarAmbientesIntegrados = () =>
+  pedir<AmbienteIntegrado[]>("/ambientes/integrados");
+
+export const listarAmbientes = (sistemaId: number) =>
+  pedir<Ambiente[]>(`/sistemas/${sistemaId}/ambientes`);
+
+export const subirAmbiente = (
+  sistemaId: number,
+  datos: { nombre: string; categoria: string; icono: string; bucle: boolean; archivo: File },
+) => {
+  const cuerpo = new FormData();
+  cuerpo.append("nombre", datos.nombre);
+  cuerpo.append("categoria", datos.categoria);
+  cuerpo.append("icono", datos.icono);
+  cuerpo.append("bucle", String(datos.bucle));
+  cuerpo.append("archivo", datos.archivo);
+  // Sin cabecera Content-Type: el navegador la pone con el 'boundary' correcto.
+  return pedir<Ambiente>(`/sistemas/${sistemaId}/ambientes`, {
+    method: "POST",
+    body: cuerpo,
+    headers: {},
+  });
+};
+
+export const borrarAmbiente = (ambienteId: number) =>
+  pedir<void>(`/ambientes/${ambienteId}`, { method: "DELETE" });
+
+/** Dirección del audio de un ambiente integrado, lista para un <audio src>. */
+export const audioAmbienteIntegrado = (clave: string) =>
+  `/ambientes/integrados/${clave}/audio`;
+
+/** Dirección del audio de un ambiente subido, lista para un <audio src>. */
+export const audioAmbiente = (ambienteId: number) => `/ambientes/${ambienteId}/audio`;

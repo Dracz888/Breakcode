@@ -346,6 +346,43 @@ input:focus, textarea:focus { outline: 2px solid var(--dorado); outline-offset: 
 .narracion:last-child { border-bottom: none; }
 .narracion .nota { display: block; margin-top: 2px; font-style: italic; }
 
+/* ---------- Mesa de sonido (ambientes) ---------- */
+
+.titulo-categoria {
+  font-family: Georgia, serif;
+  color: var(--dorado-vivo);
+  font-size: 1.05rem;
+  margin: 0 0 8px;
+  border-bottom: 1px solid var(--borde);
+  padding-bottom: 4px;
+}
+
+.mezclador {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.pista {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pista.activa {
+  border-color: var(--dorado);
+  box-shadow: 0 0 0 1px var(--dorado), 0 0 18px -6px var(--dorado);
+}
+
+.pista-icono { font-size: 1.6rem; line-height: 1; }
+.pista .boton { padding: 8px 10px; font-size: 0.9rem; }
+.pista-volumen { display: flex; flex-direction: column; gap: 2px; }
+.pista-volumen input[type="range"] { width: 100%; min-height: auto; padding: 0; accent-color: var(--dorado); }
+
 @media (min-width: 720px) {
   .mapa-disposicion { grid-template-columns: 1fr 260px; align-items: start; }
   .paleta-terrenos { flex-direction: column; }

@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
-from .routers import mapas, personajes, sistemas, voces
+from .routers import ambientes, mapas, personajes, sistemas, voces
 
 Base.metadata.create_all(bind=engine)
 
@@ -28,6 +28,7 @@ app.include_router(sistemas.router)
 app.include_router(personajes.router)
 app.include_router(mapas.router)
 app.include_router(voces.router)
+app.include_router(ambientes.router)
 
 
 # Si la aplicación visual ya está construida (cliente/dist), este mismo
