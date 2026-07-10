@@ -8,7 +8,7 @@ interface Props {
   navegar: (p: Pantalla) => void;
 }
 
-type Modo = "pintar" | "fichas";
+type Modo = "pintar" | "fichas" | "niebla";
 
 /** El mapa de batalla: una cuadrícula que se pinta como en Paint y sobre la
  *  que se colocan y mueven las fichas. Todo funciona con mouse y con el dedo. */
@@ -20,6 +20,7 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
   const [terrenoSel, setTerrenoSel] = useState("pasto");
   const [tokenSel, setTokenSel] = useState<number | null>(null);
   const [colocando, setColocando] = useState<number | null>(null);
+  const [ocultar, setOcultar] = useState(true); // pincel de niebla: tapar o revelar
   const [error, setError] = useState("");
 
   const lienzo = useRef<HTMLCanvasElement>(null);
@@ -27,6 +28,8 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
   const pintando = useRef(false);
   const cambiosPendientes = useRef(new Map<string, { x: number; y: number; terreno: string }>());
   const temporizadorEnvio = useRef<number | undefined>(undefined);
+  const cambiosNiebla = useRef(new Map<string, { x: number; y: number; oculta: boolean }>());
+  const temporizadorNiebla = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     api.verMapa(mapaId).then(setMapa).catch((e) => setError(e.message));
@@ -98,7 +101,17 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
       ctx.textBaseline = "middle";
       ctx.fillText(token.nombre.charAt(0).toUpperCase(), cx, cy + 1);
     }
-  }, [mapa, terrenos, tokenSel]);
+
+    // Niebla de guerra: las celdas ocultas se cubren con un velo oscuro.
+    // Se dibuja al final para tapar también terreno y fichas de esa zona.
+    for (let y = 0; y < mapa.alto; y++) {
+      for (let x = 0; x < mapa.ancho; x++) {
+        if (!mapa.niebla?.[y]?.[x]) continue;
+        ctx.fillStyle = modo === "niebla" ? "rgba(10,8,6,0.72)" : "rgba(6,5,4,0.94)";
+        ctx.fillRect(x * celda, y * celda, celda, celda);
+      }
+    }
+  }, [mapa, terrenos, tokenSel, modo]);
 
   useEffect(() => {
     dibujar();
@@ -134,6 +147,30 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
     cambiosPendientes.current.clear();
     try {
       await api.pintarCeldas(mapaId, cambios);
+    } catch (e) {
+      setError((e as Error).message);
+      api.verMapa(mapaId).then(setMapa).catch(() => undefined);
+    }
+  }
+
+  // ---------- Niebla de guerra ----------
+
+  function pintarNieblaCelda(x: number, y: number) {
+    if (!mapa || (mapa.niebla?.[y]?.[x] ?? false) === ocultar) return;
+    const niebla = mapa.niebla.map((fila) => fila.slice());
+    niebla[y][x] = ocultar;
+    setMapa({ ...mapa, niebla });
+    cambiosNiebla.current.set(`${x},${y}`, { x, y, oculta: ocultar });
+    window.clearTimeout(temporizadorNiebla.current);
+    temporizadorNiebla.current = window.setTimeout(enviarNiebla, 600);
+  }
+
+  async function enviarNiebla() {
+    const cambios = [...cambiosNiebla.current.values()];
+    if (!cambios.length) return;
+    cambiosNiebla.current.clear();
+    try {
+      await api.pintarNiebla(mapaId, cambios);
     } catch (e) {
       setError((e as Error).message);
       api.verMapa(mapaId).then(setMapa).catch(() => undefined);
@@ -186,15 +223,20 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
     if (modo === "pintar") {
       pintando.current = true;
       pintarCelda(celda.x, celda.y);
+    } else if (modo === "niebla") {
+      pintando.current = true;
+      pintarNieblaCelda(celda.x, celda.y);
     } else {
       tocarCelda(celda.x, celda.y);
     }
   }
 
   function alMover(evento: React.PointerEvent) {
-    if (modo !== "pintar" || !pintando.current) return;
+    if (!pintando.current) return;
     const celda = celdaDesdeEvento(evento);
-    if (celda) pintarCelda(celda.x, celda.y);
+    if (!celda) return;
+    if (modo === "pintar") pintarCelda(celda.x, celda.y);
+    else if (modo === "niebla") pintarNieblaCelda(celda.x, celda.y);
   }
 
   function alSoltar() {
@@ -227,6 +269,9 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
         <button className={modo === "fichas" ? "activa" : ""} onClick={() => setModo("fichas")}>
           ♟ Fichas
         </button>
+        <button className={modo === "niebla" ? "activa" : ""} onClick={() => { setModo("niebla"); setTokenSel(null); setColocando(null); }}>
+          🌫 Niebla
+        </button>
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -239,12 +284,44 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
             onPointerMove={alMover}
             onPointerUp={alSoltar}
             onPointerLeave={alSoltar}
-            style={{ touchAction: "none", cursor: modo === "pintar" ? "crosshair" : "pointer" }}
+            style={{ touchAction: "none", cursor: modo === "fichas" ? "pointer" : "crosshair" }}
           />
         </div>
 
         <div className="mapa-panel">
-          {modo === "pintar" ? (
+          {modo === "niebla" ? (
+            <>
+              <h3>Niebla de guerra</h3>
+              <p className="nota">
+                Tapa zonas que el jugador no debe ver todavía y revélalas a medida que
+                el grupo explora. Elige el pincel y arrastra sobre el mapa.
+              </p>
+              <div className="pestanas">
+                <button className={ocultar ? "activa" : ""} onClick={() => setOcultar(true)}>
+                  🌫 Tapar
+                </button>
+                <button className={!ocultar ? "activa" : ""} onClick={() => setOcultar(false)}>
+                  👁 Revelar
+                </button>
+              </div>
+              <button
+                className="boton boton-secundario"
+                style={{ marginTop: 12 }}
+                onClick={() => {
+                  if (!mapa) return;
+                  const cambios = [];
+                  for (let y = 0; y < mapa.alto; y++)
+                    for (let x = 0; x < mapa.ancho; x++)
+                      if (mapa.niebla?.[y]?.[x]) cambios.push({ x, y, oculta: false });
+                  if (!cambios.length) return;
+                  setMapa({ ...mapa, niebla: mapa.niebla.map((f) => f.map(() => false)) });
+                  api.pintarNiebla(mapaId, cambios).catch((e) => setError((e as Error).message));
+                }}
+              >
+                Revelar todo el mapa
+              </button>
+            </>
+          ) : modo === "pintar" ? (
             <>
               <h3>Paleta de terrenos</h3>
               <p className="nota">Elige un terreno y pinta arrastrando sobre el mapa.</p>

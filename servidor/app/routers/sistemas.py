@@ -63,10 +63,101 @@ def ver_sistema(sistema_id: int, db: Session = Depends(obtener_db)):
     return _obtener_sistema(db, sistema_id)
 
 
+@router.put("/sistemas/{sistema_id}", response_model=schemas.SistemaDetalle)
+def editar_sistema(
+    sistema_id: int, datos: schemas.SistemaEditar, db: Session = Depends(obtener_db)
+):
+    """Editar los datos del sistema, incluidas las notas privadas del DJ."""
+    sistema = _obtener_sistema(db, sistema_id)
+    for campo, valor in datos.model_dump(exclude_unset=True).items():
+        setattr(sistema, campo, valor)
+    db.commit()
+    db.refresh(sistema)
+    return sistema
+
+
 @router.delete("/sistemas/{sistema_id}", status_code=204)
 def borrar_sistema(sistema_id: int, db: Session = Depends(obtener_db)):
     db.delete(_obtener_sistema(db, sistema_id))
     db.commit()
+
+
+# ---------- Exportar / importar (fase 9 — respaldo y compartir) ----------
+
+@router.get("/sistemas/{sistema_id}/exportar", response_model=schemas.SistemaExportado)
+def exportar_sistema(sistema_id: int, db: Session = Depends(obtener_db)):
+    """Descarga el sistema entero (reglas, fichas y mapas) como un archivo."""
+    sistema = _obtener_sistema(db, sistema_id)
+    return schemas.SistemaExportado(
+        nombre=sistema.nombre,
+        descripcion=sistema.descripcion,
+        notas=sistema.notas or "",
+        atributos=[schemas.AtributoSalida.model_validate(a) for a in sistema.atributos],
+        estadisticas=[
+            schemas.EstadisticaSalida.model_validate(e) for e in sistema.estadisticas
+        ],
+        personajes=[
+            schemas.PersonajeExportado(
+                nombre=p.nombre,
+                nivel=p.nivel,
+                es_monstruo=p.es_monstruo,
+                atributos=p.atributos,
+            )
+            for p in sistema.personajes
+        ],
+        mapas=[
+            schemas.MapaExportado(
+                nombre=m.nombre,
+                ancho=m.ancho,
+                alto=m.alto,
+                celdas=m.celdas,
+                niebla=m.niebla or [],
+            )
+            for m in sistema.mapas
+        ],
+    )
+
+
+@router.post("/sistemas/importar", response_model=schemas.SistemaSalida, status_code=201)
+def importar_sistema(datos: schemas.SistemaExportado, db: Session = Depends(obtener_db)):
+    """Crea un sistema nuevo a partir de un archivo exportado.
+
+    Siempre nace como un sistema aparte (nunca sobrescribe uno existente), así
+    importar un respaldo no borra lo que ya tenías.
+    """
+    if datos.formato != "breakcode/sistema":
+        raise HTTPException(422, "Este archivo no parece un sistema de Breakcode.")
+
+    sistema = models.Sistema(
+        nombre=datos.nombre, descripcion=datos.descripcion, notas=datos.notas
+    )
+    for a in datos.atributos:
+        sistema.atributos.append(models.DefinicionAtributo(**a.model_dump()))
+    for e in datos.estadisticas:
+        sistema.estadisticas.append(models.DefinicionEstadistica(**e.model_dump()))
+    for p in datos.personajes:
+        sistema.personajes.append(
+            models.Personaje(
+                nombre=p.nombre,
+                nivel=p.nivel,
+                es_monstruo=p.es_monstruo,
+                atributos=p.atributos,
+            )
+        )
+    for m in datos.mapas:
+        sistema.mapas.append(
+            models.Mapa(
+                nombre=m.nombre,
+                ancho=m.ancho,
+                alto=m.alto,
+                celdas=m.celdas,
+                niebla=m.niebla,
+            )
+        )
+    db.add(sistema)
+    db.commit()
+    db.refresh(sistema)
+    return sistema
 
 
 # ---------- Atributos ----------

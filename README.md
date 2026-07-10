@@ -24,6 +24,18 @@ cliente/         Las pantallas: aplicación web (React) — Fase 2
     componentes/   Editor de fórmulas con vista previa en vivo
 ```
 
+## Refinamiento (Fase 9)
+
+Detalles que pulen la mesa de juego:
+
+- **Niebla de guerra** — en el mapa de batalla, el DJ tapa zonas que el jugador
+  aún no debe ver y las revela a medida que el grupo explora (pestaña 🌫 Niebla).
+- **Notas del DJ** — cada sistema guarda notas privadas (intrigas, secretos de
+  la trama) que los jugadores nunca ven (pestaña "Notas del DJ").
+- **Exportar / importar** — descarga un sistema completo (reglas, fichas y
+  mapas) como archivo para respaldarlo o compartirlo, y vuelve a cargarlo en
+  cualquier cuenta desde la pantalla de inicio.
+
 ## Cómo arrancar la aplicación
 
 ```bash

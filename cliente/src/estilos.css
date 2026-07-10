@@ -161,6 +161,11 @@ textarea.formula, input.formula {
 
 input:focus, textarea:focus { outline: 2px solid var(--dorado); outline-offset: -1px; }
 
+textarea.area-notas {
+  resize: vertical;
+  line-height: 1.6;
+}
+
 .boton {
   background: var(--dorado);
   color: #241c10;

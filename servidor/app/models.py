@@ -17,6 +17,8 @@ class Sistema(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     nombre: Mapped[str] = mapped_column(String(120))
     descripcion: Mapped[str] = mapped_column(Text, default="")
+    # Notas privadas del DJ: no las ve el jugador. (fase 9 — refinamiento)
+    notas: Mapped[str] = mapped_column(Text, default="")
 
     atributos: Mapped[list["DefinicionAtributo"]] = relationship(
         back_populates="sistema", cascade="all, delete-orphan"
@@ -94,6 +96,9 @@ class Mapa(Base):
     ancho: Mapped[int] = mapped_column(Integer)
     alto: Mapped[int] = mapped_column(Integer)
     celdas: Mapped[list] = mapped_column(JSON)  # celdas[y][x] = clave de terreno
+    # Niebla de guerra: niebla[y][x] = True si esa celda está oculta al jugador.
+    # (fase 9 — refinamiento). Nace vacía: el DJ decide qué esconde.
+    niebla: Mapped[list] = mapped_column(JSON, default=list)
 
     sistema: Mapped[Sistema] = relationship(back_populates="mapas")
     tokens: Mapped[list["Token"]] = relationship(
