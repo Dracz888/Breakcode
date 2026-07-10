@@ -11,7 +11,9 @@ type PestanaId =
   | "fichas"
   | "mapas"
   | "voces"
-  | "ambientes";
+  | "ambientes"
+  | "mundo"
+  | "campanas";
 
 interface Props {
   sistemaId: number;
@@ -69,6 +71,8 @@ export default function VistaSistema({ sistemaId, navegar }: Props) {
             ["mapas", "Mapas"],
             ["voces", "Voces"],
             ["ambientes", "Ambientes"],
+            ["mundo", "Mundo"],
+            ["campanas", "Campañas"],
           ] as [PestanaId, string][]
         ).map(([id, titulo]) => (
           <button
@@ -103,6 +107,12 @@ export default function VistaSistema({ sistemaId, navegar }: Props) {
       {pestana === "voces" && <PestanaVoces sistema={sistema} setError={setError} />}
       {pestana === "ambientes" && (
         <MesaDeSonido sistemaId={sistema.id} setError={setError} />
+      )}
+      {pestana === "mundo" && (
+        <PestanaMundo sistema={sistema} navegar={navegar} setError={setError} />
+      )}
+      {pestana === "campanas" && (
+        <PestanaCampanas sistema={sistema} navegar={navegar} setError={setError} />
       )}
     </>
   );
@@ -271,6 +281,251 @@ function PestanaVoces({
         />
       )}
     </>
+  );
+}
+
+// ---------- Pestaña: Mundo (mapas geográficos) ----------
+
+function PestanaMundo({
+  sistema,
+  navegar,
+  setError,
+}: {
+  sistema: api.SistemaDetalle;
+  navegar: (p: Pantalla) => void;
+  setError: (m: string) => void;
+}) {
+  const [mundos, setMundos] = useState<api.MapaGeografico[]>([]);
+  const [nombre, setNombre] = useState("");
+  const [imagenUrl, setImagenUrl] = useState("");
+
+  const recargar = useCallback(
+    () =>
+      api
+        .listarMundos(sistema.id)
+        .then(setMundos)
+        .catch((e) => setError(e.message)),
+    [sistema.id, setError],
+  );
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function crear(evento: FormEvent) {
+    evento.preventDefault();
+    setError("");
+    try {
+      const mundo = await api.crearMundo(sistema.id, {
+        nombre,
+        imagen_url: imagenUrl.trim(),
+      });
+      navegar({ nombre: "mundo", mundoId: mundo.id, sistemaId: sistema.id });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function borrar(mundo: api.MapaGeografico) {
+    if (!confirm(`¿Borrar el mapa del mundo "${mundo.nombre}" y sus marcadores?`)) return;
+    setError("");
+    try {
+      await api.borrarMundo(mundo.id);
+      recargar();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  return (
+    <div className="dos-columnas">
+      <div>
+        {mundos.length === 0 && (
+          <p className="nota">
+            El mapa del mundo es una imagen grande (un mapa dibujado o generado
+            fuera del programa) sobre la que colocas marcadores de ciudades,
+            mazmorras y puntos de interés. Crea el primero al lado.
+          </p>
+        )}
+        {mundos.map((m) => (
+          <div
+            key={m.id}
+            className="tarjeta tarjeta-clic"
+            onClick={() => navegar({ nombre: "mundo", mundoId: m.id, sistemaId: sistema.id })}
+          >
+            <div className="fila">
+              <div className="espacio">
+                <h3>🗺 {m.nombre}</h3>
+                <span className="nota">
+                  {m.imagen_url ? "con imagen de fondo" : "fondo de pergamino"}
+                </span>
+              </div>
+              <button
+                className="boton boton-peligro"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  borrar(m);
+                }}
+              >
+                Borrar
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="tarjeta">
+        <h3>Nuevo mapa del mundo</h3>
+        <form onSubmit={crear}>
+          <label className="campo">
+            <span>Nombre</span>
+            <input
+              type="text"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Ej. Continente de Aletheia"
+              required
+            />
+          </label>
+          <label className="campo">
+            <span>Enlace a la imagen de fondo (opcional)</span>
+            <input
+              type="text"
+              value={imagenUrl}
+              onChange={(e) => setImagenUrl(e.target.value)}
+              placeholder="https://…/mapa.jpg"
+            />
+            <span className="nota">
+              Puedes dejarlo vacío y añadir la imagen después; sin imagen se usa un
+              fondo de pergamino.
+            </span>
+          </label>
+          <button className="boton" type="submit">
+            Crear mapa del mundo
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Pestaña: Campañas ----------
+
+function PestanaCampanas({
+  sistema,
+  navegar,
+  setError,
+}: {
+  sistema: api.SistemaDetalle;
+  navegar: (p: Pantalla) => void;
+  setError: (m: string) => void;
+}) {
+  const [campanas, setCampanas] = useState<api.Campana[]>([]);
+  const [nombre, setNombre] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+
+  const recargar = useCallback(
+    () =>
+      api
+        .listarCampanas(sistema.id)
+        .then(setCampanas)
+        .catch((e) => setError(e.message)),
+    [sistema.id, setError],
+  );
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function crear(evento: FormEvent) {
+    evento.preventDefault();
+    setError("");
+    try {
+      const campana = await api.crearCampana(sistema.id, { nombre, descripcion });
+      navegar({ nombre: "campana", campanaId: campana.id, sistemaId: sistema.id });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function borrar(campana: api.Campana) {
+    if (!confirm(`¿Borrar la campaña "${campana.nombre}" con todos sus arcos y eventos?`))
+      return;
+    setError("");
+    try {
+      await api.borrarCampana(campana.id);
+      recargar();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  return (
+    <div className="dos-columnas">
+      <div>
+        {campanas.length === 0 && (
+          <p className="nota">
+            Una campaña es la historia que se juega en este sistema. Se organiza en
+            arcos (capítulos) y dentro de cada uno registras los eventos: qué pasó,
+            cuándo, con quién y en qué lugar del mapa. Con eso, la campaña reconstruye
+            su línea de tiempo. Crea la primera al lado.
+          </p>
+        )}
+        {campanas.map((c) => (
+          <div
+            key={c.id}
+            className="tarjeta tarjeta-clic"
+            onClick={() =>
+              navegar({ nombre: "campana", campanaId: c.id, sistemaId: sistema.id })
+            }
+          >
+            <div className="fila">
+              <div className="espacio">
+                <h3>📖 {c.nombre}</h3>
+                {c.descripcion && <p className="descripcion">{c.descripcion}</p>}
+              </div>
+              <button
+                className="boton boton-peligro"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  borrar(c);
+                }}
+              >
+                Borrar
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="tarjeta">
+        <h3>Nueva campaña</h3>
+        <form onSubmit={crear}>
+          <label className="campo">
+            <span>Nombre</span>
+            <input
+              type="text"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Ej. La caída del faro"
+              required
+            />
+          </label>
+          <label className="campo">
+            <span>Descripción (opcional)</span>
+            <input
+              type="text"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              placeholder="¿De qué trata esta historia?"
+            />
+          </label>
+          <button className="boton" type="submit">
+            Crear campaña
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
 

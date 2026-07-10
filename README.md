@@ -10,22 +10,35 @@ propia aplicación, sin escribir código.
 
 ```
 DISEÑO.md        El documento de diseño (empieza por aquí)
-servidor/        El cerebro: API en Python (FastAPI) — Fase 1
+servidor/        El cerebro: API en Python (FastAPI)
   app/
     formulas.py    Motor de fórmulas tipo Excel (simpleeval)
     dados.py       Tirador de dados ("2d6+3") — Fase 5
     motor.py       Cálculo de estadísticas de una ficha (vida, iniciativa…)
-    models.py      Tablas: sistemas, atributos, estadísticas, personajes
+    models.py      Tablas: sistemas, atributos, estadísticas, personajes,
+                   mapas, mundos y marcadores, campañas/arcos/eventos, voces
     schemas.py     Validación de datos de entrada/salida
     tiempo_real.py Salas multijugador por WebSocket — Fase 4
-    routers/       Las operaciones de la API (incl. combate — Fase 5)
+    terrenos.py    Catálogo de terrenos del mapa de batalla
+    marcadores.py  Catálogo de tipos de marcador del mapa geográfico
+    routers/       Las operaciones de la API (sistemas, personajes, mapas,
+                   combate, geografia, campanas, voces, ambientes)
   tests/           Pruebas automáticas
   ejemplo.py       Carga un sistema de demostración
-cliente/         Las pantallas: aplicación web (React) — Fase 2
+cliente/         Las pantallas: aplicación web (React)
   src/
-    vistas/        Inicio, editor de sistema, ficha de personaje
+    vistas/        Inicio, editor de sistema, ficha, mapa de batalla,
+                   mapa del mundo (Mundo) y campañas (Campana)
     componentes/   Editor de fórmulas con vista previa en vivo
 ```
+
+## Estado por fases
+
+Fases 1–3 y 7 construidas: la fábrica de sistemas (atributos, fórmulas,
+fichas), el mapa de batalla, y —desde la fase 7— el **mapa geográfico** del
+mundo con marcadores de lugares y las **campañas** con sus arcos y eventos
+(la línea de tiempo de la trama). Ver la hoja de ruta completa en
+[DISEÑO.md](DISEÑO.md).
 
 ## Cómo arrancar la aplicación
 

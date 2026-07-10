@@ -477,10 +477,143 @@ input:focus, textarea:focus { outline: 2px solid var(--dorado); outline-offset: 
   .paleta-terrenos .terreno { flex: 1 1 45%; }
 }
 
+/* ---------- Mapa geográfico (el mundo) ---------- */
+
+.mundo-disposicion { display: grid; grid-template-columns: 1fr; gap: 16px; }
+
+.mundo-visor {
+  position: relative;
+  overflow: hidden;
+  height: 60vh;
+  min-height: 320px;
+  background: #0f0c0a;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  touch-action: none;
+}
+
+.mundo-camara { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+
+.mundo-fondo {
+  position: relative;
+  width: 900px;
+  height: 620px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.mundo-fondo.pergamino {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(201, 163, 92, 0.12), transparent 55%),
+    radial-gradient(circle at 75% 70%, rgba(122, 90, 56, 0.18), transparent 55%),
+    repeating-linear-gradient(45deg, #2a2118 0 12px, #271e16 12px 24px);
+  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.6);
+}
+
+.marcador {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--texto);
+}
+
+.marcador .pin {
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 2px solid rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+.marcador .pin > * { transform: rotate(45deg); font-size: 14px; }
+
+.marcador .etiqueta {
+  margin-top: 3px;
+  font-size: 0.72rem;
+  font-family: Georgia, serif;
+  background: rgba(23, 19, 16, 0.82);
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  color: var(--dorado-vivo);
+}
+
+.marcador.activo .pin { border-color: #fff; }
+.marcador.activo .etiqueta { border-color: var(--dorado); }
+
+.marcador-pendiente {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 22px;
+  color: var(--dorado-vivo);
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+.mundo-panel {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 16px;
+}
+.mundo-panel h3 { margin: 0 0 6px; font-family: Georgia, serif; color: var(--dorado-vivo); }
+
+.lista-lugares { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.lista-lugares .chip-clave { text-align: left; }
+
+.mundo-visor select, .mundo-panel select { background: var(--fondo); }
+
+/* ---------- Línea de tiempo de campañas ---------- */
+
+.linea-tiempo { display: flex; flex-direction: column; gap: 20px; }
+
+.arco {
+  border-left: 3px solid var(--dorado);
+  padding-left: 16px;
+}
+
+.arco-cabecera { display: flex; align-items: center; gap: 10px; }
+.arco-cabecera h2 {
+  flex: 1;
+  margin: 0;
+  font-family: Georgia, serif;
+  color: var(--dorado-vivo);
+  font-size: 1.2rem;
+}
+
+.eventos { list-style: none; padding: 0; margin: 12px 0; display: flex; flex-direction: column; gap: 10px; }
+
+.evento {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 12px 14px;
+  position: relative;
+}
+
+.evento h3 { margin: 0; font-family: Georgia, serif; color: var(--dorado-vivo); font-size: 1.02rem; }
+.evento-fecha { font-size: 0.8rem; color: var(--texto-suave); }
+.evento-desc { margin: 8px 0; font-size: 0.92rem; }
+.evento-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+
+.chip-clave.activo { border-color: var(--dorado); color: var(--dorado-vivo); background: var(--panel-2); }
+
 /* ---------- Pantalla ancha (PC) ---------- */
 
 @media (min-width: 720px) {
   .cabecera h1 { font-size: 1.6rem; }
   .ficha { grid-template-columns: 5fr 4fr; align-items: start; }
   .dos-columnas { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .mundo-disposicion { grid-template-columns: 1fr 300px; align-items: start; }
 }
