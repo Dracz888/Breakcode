@@ -13,6 +13,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -47,6 +48,15 @@ class Sistema(Base):
         back_populates="sistema", cascade="all, delete-orphan"
     )
     mapas: Mapped[list["Mapa"]] = relationship(
+        back_populates="sistema", cascade="all, delete-orphan"
+    )
+    voces: Mapped[list["Voz"]] = relationship(
+        back_populates="sistema", cascade="all, delete-orphan"
+    )
+    narraciones: Mapped[list["Narracion"]] = relationship(
+        back_populates="sistema", cascade="all, delete-orphan"
+    )
+    ambientes: Mapped[list["Ambiente"]] = relationship(
         back_populates="sistema", cascade="all, delete-orphan"
     )
 
@@ -95,8 +105,13 @@ class Personaje(Base):
     nivel: Mapped[int] = mapped_column(Integer, default=1)
     es_monstruo: Mapped[bool] = mapped_column(Boolean, default=False)
     atributos: Mapped[dict] = mapped_column(JSON, default=dict)  # {clave: valor}
+    # La voz con la que habla este personaje (opcional; se elige del catálogo).
+    voz_id: Mapped[int | None] = mapped_column(
+        ForeignKey("voces.id", ondelete="SET NULL"), nullable=True
+    )
 
     sistema: Mapped[Sistema] = relationship(back_populates="personajes")
+    voz: Mapped["Voz | None"] = relationship(back_populates="personajes")
     tokens: Mapped[list["Token"]] = relationship(
         back_populates="personaje", cascade="all, delete-orphan"
     )
@@ -146,6 +161,78 @@ class Token(Base):
 
     mapa: Mapped[Mapa] = relationship(back_populates="tokens")
     personaje: Mapped[Personaje] = relationship(back_populates="tokens")
+
+
+class Voz(Base):
+    """Una voz del catálogo del sistema (Módulo 5).
+
+    Guarda la descripción escrita ("ogro grave y monstruoso") y el identificador
+    de la voz en ElevenLabs. Cada personaje puede tener asignada una de estas.
+    """
+
+    __tablename__ = "voces"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    sistema_id: Mapped[int] = mapped_column(ForeignKey("sistemas.id"))
+    nombre: Mapped[str] = mapped_column(String(120))
+    descripcion: Mapped[str] = mapped_column(Text, default="")
+    voz_externa_id: Mapped[str] = mapped_column(String(120))  # id de voz en ElevenLabs
+    ajustes: Mapped[dict] = mapped_column(JSON, default=dict)  # estabilidad, similitud…
+
+    sistema: Mapped[Sistema] = relationship(back_populates="voces")
+    personajes: Mapped[list["Personaje"]] = relationship(back_populates="voz")
+
+
+class Narracion(Base):
+    """Una línea narrada con su audio, guardada como historial compartido.
+
+    Es la pieza "audio para todos": el audio queda registrado en el sistema para
+    que cualquiera en la mesa pueda volver a reproducirlo. El audio se guarda en
+    la propia base de datos (clips cortos), sin archivos sueltos que administrar.
+    """
+
+    __tablename__ = "narraciones"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    sistema_id: Mapped[int] = mapped_column(ForeignKey("sistemas.id"))
+    personaje_id: Mapped[int | None] = mapped_column(
+        ForeignKey("personajes.id", ondelete="SET NULL"), nullable=True
+    )
+    voz_id: Mapped[int | None] = mapped_column(
+        ForeignKey("voces.id", ondelete="SET NULL"), nullable=True
+    )
+    nombre_locutor: Mapped[str] = mapped_column(String(120), default="")
+    texto: Mapped[str] = mapped_column(Text)
+    audio: Mapped[bytes] = mapped_column(LargeBinary)
+    tipo_mime: Mapped[str] = mapped_column(String(40), default="audio/mpeg")
+    es_demostracion: Mapped[bool] = mapped_column(Boolean, default=False)
+    creada_en: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+
+    sistema: Mapped[Sistema] = relationship(back_populates="narraciones")
+
+
+class Ambiente(Base):
+    """Un sonido de fondo subido por el DJ a la mesa de sonido (Módulo 5.7).
+
+    Los ambientes integrados se sintetizan en el servidor y no viven aquí; esta
+    tabla guarda solo las grabaciones propias que el DJ sube (una taberna real,
+    una pista de música…). El audio se guarda en la base de datos.
+    """
+
+    __tablename__ = "ambientes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    sistema_id: Mapped[int] = mapped_column(ForeignKey("sistemas.id"))
+    nombre: Mapped[str] = mapped_column(String(120))
+    categoria: Mapped[str] = mapped_column(String(60), default="Propios")
+    icono: Mapped[str] = mapped_column(String(8), default="🎵")
+    audio: Mapped[bytes] = mapped_column(LargeBinary)
+    tipo_mime: Mapped[str] = mapped_column(String(40), default="audio/mpeg")
+    bucle: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    sistema: Mapped[Sistema] = relationship(back_populates="ambientes")
 
 
 class TiradaDado(Base):

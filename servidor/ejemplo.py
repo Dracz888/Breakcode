@@ -16,6 +16,7 @@ from app.models import (
     Personaje,
     Sistema,
     Token,
+    Voz,
 )
 from app.terrenos import TERRENO_INICIAL
 
@@ -74,10 +75,28 @@ for clave, nombre, formula in estadisticas:
         )
     )
 
+# Dos voces de muestra (identificadores de voces prediseñadas de ElevenLabs).
+# Sin clave configurada sonarán en modo demostración; con clave, serán reales.
+voz_heroina = Voz(
+    sistema_id=sistema.id,
+    nombre="Kaelith",
+    descripcion="Femenina firme y decidida",
+    voz_externa_id="AZnzlk1XvdvUeBnXmlld",
+)
+voz_ogro = Voz(
+    sistema_id=sistema.id,
+    nombre="Ogro cavernario",
+    descripcion="Grave, monstruosa, arrastra las palabras",
+    voz_externa_id="VR6AewLTigWG4xSOukaG",
+)
+db.add_all([voz_heroina, voz_ogro])
+db.flush()
+
 kaelith = Personaje(
     sistema_id=sistema.id,
     nombre="Kaelith",
     nivel=3,
+    voz_id=voz_heroina.id,
     atributos={
         "fuerza": 5,
         "destreza": 3,
@@ -92,6 +111,7 @@ ogro = Personaje(
     nombre="Ogro de las ciénagas",
     nivel=2,
     es_monstruo=True,
+    voz_id=voz_ogro.id,
     atributos={"fuerza": 8, "destreza": 1, "intelecto": 1, "voluntad": 2},
 )
 db.add_all([kaelith, ogro])
@@ -134,6 +154,6 @@ db.add_all(
 db.commit()
 print(
     f"Sistema de ejemplo creado (id {sistema.id}) con 6 atributos, 5 fórmulas, "
-    "2 fichas y 1 mapa de batalla."
+    "2 fichas, 2 voces y 1 mapa de batalla."
 )
 db.close()

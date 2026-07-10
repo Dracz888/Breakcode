@@ -3,6 +3,7 @@ uvicorn[standard]
 sqlalchemy
 simpleeval
 psycopg[binary]
+python-multipart
 pytest
 httpx
 websockets

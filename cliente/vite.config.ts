@@ -7,11 +7,18 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      "/sistemas": "http://localhost:8000",
-      "/personajes": "http://localhost:8000",
-      "/mapas": "http://localhost:8000",
-      "/tokens": "http://localhost:8000",
-      "/terrenos": "http://localhost:8000",
+      ...Object.fromEntries(
+        [
+          "/sistemas",
+          "/personajes",
+          "/terrenos",
+          "/mapas",
+          "/tokens",
+          "/voces",
+          "/narraciones",
+          "/ambientes",
+        ].map((ruta) => [ruta, "http://localhost:8000"]),
+      ),
       // La sala en tiempo real viaja por WebSocket.
       "/ws": { target: "ws://localhost:8000", ws: true },
     },
