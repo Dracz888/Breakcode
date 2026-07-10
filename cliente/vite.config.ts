@@ -9,6 +9,11 @@ export default defineConfig({
     proxy: {
       "/sistemas": "http://localhost:8000",
       "/personajes": "http://localhost:8000",
+      "/mapas": "http://localhost:8000",
+      "/tokens": "http://localhost:8000",
+      "/terrenos": "http://localhost:8000",
+      // La sala en tiempo real viaja por WebSocket.
+      "/ws": { target: "ws://localhost:8000", ws: true },
     },
   },
 });

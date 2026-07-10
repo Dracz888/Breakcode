@@ -179,6 +179,8 @@ export interface Token {
   es_monstruo: boolean;
   x: number;
   y: number;
+  vida_actual: number | null;
+  vida_maxima: number | null;
 }
 
 export interface MapaDetalle extends Mapa {
@@ -217,3 +219,135 @@ export const moverToken = (tokenId: number, x: number, y: number) =>
 
 export const quitarToken = (tokenId: number) =>
   pedir<void>(`/tokens/${tokenId}`, { method: "DELETE" });
+
+// ---------- Combate por turnos ----------
+
+export interface ConfigCombate {
+  formula_iniciativa: string;
+  dado_iniciativa: string;
+  estadistica_vida: string;
+}
+
+export interface GrupoDados {
+  cantidad: number;
+  caras: number;
+  valores: number[];
+}
+
+export interface Tirada {
+  id: number;
+  mapa_id: number;
+  autor: string;
+  motivo: string;
+  expresion: string;
+  grupos: GrupoDados[];
+  modificador: number;
+  total: number;
+  creada_en: string;
+}
+
+export interface Participante {
+  token_id: number;
+  nombre: string;
+  iniciativa: number;
+}
+
+export interface Combate {
+  mapa_id: number;
+  ronda: number;
+  indice_turno: number;
+  orden: Participante[];
+  token_en_turno: number | null;
+}
+
+export const verConfigCombate = (sistemaId: number) =>
+  pedir<ConfigCombate>(`/sistemas/${sistemaId}/config-combate`);
+
+export const guardarConfigCombate = (sistemaId: number, config: ConfigCombate) =>
+  pedir<ConfigCombate>(`/sistemas/${sistemaId}/config-combate`, {
+    method: "PUT",
+    body: JSON.stringify(config),
+  });
+
+export const listarTiradas = (mapaId: number) =>
+  pedir<Tirada[]>(`/mapas/${mapaId}/tiradas`);
+
+export const tirarDados = (
+  mapaId: number,
+  datos: { expresion: string; autor?: string; motivo?: string },
+) => pedir<Tirada>(`/mapas/${mapaId}/tiradas`, { method: "POST", body: JSON.stringify(datos) });
+
+export const cambiarVida = (tokenId: number, delta: number) =>
+  pedir<Token>(`/tokens/${tokenId}/vida`, { method: "PUT", body: JSON.stringify({ delta }) });
+
+export const verCombate = (mapaId: number) =>
+  pedir<Combate | null>(`/mapas/${mapaId}/combate`);
+
+export const iniciarCombate = (mapaId: number) =>
+  pedir<Combate>(`/mapas/${mapaId}/combate/iniciar`, { method: "POST" });
+
+export const siguienteTurno = (mapaId: number) =>
+  pedir<Combate>(`/mapas/${mapaId}/combate/siguiente`, { method: "POST" });
+
+export const terminarCombate = (mapaId: number) =>
+  pedir<void>(`/mapas/${mapaId}/combate`, { method: "DELETE" });
+
+// ---------- Multijugador en tiempo real (WebSocket) ----------
+
+export type EventoMapa =
+  | { tipo: "terreno"; datos: { cambios: { x: number; y: number; terreno: string }[] } }
+  | { tipo: "token_colocado"; datos: Token }
+  | { tipo: "token_movido"; datos: Token }
+  | { tipo: "token_actualizado"; datos: Token }
+  | { tipo: "token_quitado"; datos: { id: number } }
+  | { tipo: "tirada"; datos: Tirada }
+  | { tipo: "combate"; datos: Combate }
+  | { tipo: "combate_terminado"; datos: { mapa_id: number } }
+  | { tipo: "presencia"; datos: { conectados: number } };
+
+/**
+ * Abre la sala del mapa: escucha las novedades que reparte el servidor y las
+ * entrega a `manejar`. Si la conexión se cae, reintenta sola cada 2 s; al
+ * reconectar llama a `alReconectar` para que la pantalla vuelva a sincronizarse
+ * (por si se perdió algún cambio mientras estaba desconectada).
+ *
+ * Devuelve una función para cerrar la sala al salir de la pantalla.
+ */
+export function conectarMapa(
+  mapaId: number,
+  manejar: (evento: EventoMapa) => void,
+  alReconectar?: () => void,
+): () => void {
+  let socket: WebSocket | null = null;
+  let cerrado = false;
+  let reintento: ReturnType<typeof setTimeout> | undefined;
+  let primeraConexion = true;
+
+  function abrir() {
+    const protocolo = location.protocol === "https:" ? "wss:" : "ws:";
+    socket = new WebSocket(`${protocolo}//${location.host}/ws/mapas/${mapaId}`);
+
+    socket.onopen = () => {
+      if (!primeraConexion) alReconectar?.();
+      primeraConexion = false;
+    };
+    socket.onmessage = (mensaje) => {
+      try {
+        manejar(JSON.parse(mensaje.data) as EventoMapa);
+      } catch {
+        /* mensaje ilegible: se ignora */
+      }
+    };
+    socket.onclose = () => {
+      if (!cerrado) reintento = setTimeout(abrir, 2000);
+    };
+  }
+
+  abrir();
+
+  return () => {
+    cerrado = true;
+    clearTimeout(reintento);
+    socket?.close();
+  };
+}

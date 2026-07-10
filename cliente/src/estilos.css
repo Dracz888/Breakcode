@@ -62,6 +62,11 @@ html, body {
   width: 100%;
 }
 
+.cabecera .subtitulo .conectados {
+  color: var(--verde);
+  font-weight: 600;
+}
+
 .boton-volver {
   background: none;
   border: 1px solid var(--borde);
@@ -333,9 +338,88 @@ input:focus, textarea:focus { outline: 2px solid var(--dorado); outline-offset: 
 }
 
 @media (min-width: 720px) {
-  .mapa-disposicion { grid-template-columns: 1fr 260px; align-items: start; }
+  .mapa-disposicion { grid-template-columns: 1fr 300px; align-items: start; }
   .paleta-terrenos { flex-direction: column; }
 }
+
+/* ---------- Panel de combate ---------- */
+
+.mapa-panel h4 {
+  margin: 16px 0 6px;
+  font-family: Georgia, serif;
+  color: var(--dorado-vivo);
+  border-top: 1px solid var(--borde);
+  padding-top: 12px;
+}
+
+.mapa-panel .entrada { flex: 1; min-width: 0; }
+
+.dados-rapidos { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+
+.chip-dado {
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  color: var(--texto);
+  padding: 6px 10px;
+  min-height: 38px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.chip-dado:hover { border-color: var(--dorado); }
+.chip-dado.peligro { color: var(--rojo); }
+.chip-dado.peligro:hover { border-color: var(--rojo); }
+
+.vida-control {
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+.vida-control .nota { margin: 0 0 6px; }
+
+.orden-iniciativa { list-style: none; margin: 6px 0; padding: 0; }
+.orden-iniciativa li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  margin-bottom: 5px;
+  background: var(--fondo);
+}
+.orden-iniciativa li.en-turno {
+  border-color: var(--dorado);
+  background: var(--panel-2);
+  box-shadow: inset 3px 0 0 var(--dorado-vivo);
+}
+.orden-iniciativa .ini {
+  font-family: "SF Mono", Consolas, Menlo, monospace;
+  color: var(--dorado-vivo);
+  font-weight: 700;
+}
+
+.historial-dados { list-style: none; margin: 6px 0 0; padding: 0; max-height: 240px; overflow-y: auto; }
+.historial-dados li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--borde);
+  font-size: 0.9rem;
+}
+.tirada-total {
+  font-family: Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--dorado-vivo);
+  min-width: 2ch;
+  text-align: right;
+}
+.tirada-detalle { flex: 1; }
+.dados-valores { font-family: "SF Mono", Consolas, Menlo, monospace; color: var(--texto-suave); }
 
 @media (max-width: 719px) {
   .paleta-terrenos { flex-direction: row; flex-wrap: wrap; }

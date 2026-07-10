@@ -8,7 +8,7 @@ interface Props {
   navegar: (p: Pantalla) => void;
 }
 
-type Modo = "pintar" | "fichas";
+type Modo = "pintar" | "fichas" | "combate";
 
 /** El mapa de batalla: una cuadrícula que se pinta como en Paint y sobre la
  *  que se colocan y mueven las fichas. Todo funciona con mouse y con el dedo. */
@@ -20,6 +20,10 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
   const [terrenoSel, setTerrenoSel] = useState("pasto");
   const [tokenSel, setTokenSel] = useState<number | null>(null);
   const [colocando, setColocando] = useState<number | null>(null);
+  const [conectados, setConectados] = useState(1);
+  const [tiradas, setTiradas] = useState<api.Tirada[]>([]);
+  const [combate, setCombate] = useState<api.Combate | null>(null);
+  const [expresion, setExpresion] = useState("1d20");
   const [error, setError] = useState("");
 
   const lienzo = useRef<HTMLCanvasElement>(null);
@@ -32,7 +36,74 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
     api.verMapa(mapaId).then(setMapa).catch((e) => setError(e.message));
     api.listarTerrenos().then(setTerrenos).catch((e) => setError(e.message));
     api.listarPersonajes(sistemaId).then(setPersonajes).catch((e) => setError(e.message));
+    api.listarTiradas(mapaId).then(setTiradas).catch(() => undefined);
+    api.verCombate(mapaId).then(setCombate).catch(() => undefined);
   }, [mapaId, sistemaId]);
+
+  // ---------- Multijugador: escuchar los cambios de los demás ----------
+
+  useEffect(() => {
+    const cerrarSala = api.conectarMapa(
+      mapaId,
+      (evento) => {
+        if (evento.tipo === "presencia") {
+          setConectados(evento.datos.conectados);
+          return;
+        }
+        if (evento.tipo === "tirada") {
+          setTiradas((prev) =>
+            (prev.some((t) => t.id === evento.datos.id) ? prev : [...prev, evento.datos]).slice(-50),
+          );
+          return;
+        }
+        if (evento.tipo === "combate") {
+          setCombate(evento.datos);
+          return;
+        }
+        if (evento.tipo === "combate_terminado") {
+          setCombate(null);
+          return;
+        }
+        if (evento.tipo === "token_quitado") {
+          const idQuitado = evento.datos.id;
+          setTokenSel((sel) => (sel === idQuitado ? null : sel));
+        }
+        setMapa((prev) => {
+          if (!prev) return prev;
+          switch (evento.tipo) {
+            case "terreno": {
+              const celdas = prev.celdas.map((fila) => fila.slice());
+              for (const c of evento.datos.cambios) {
+                if (celdas[c.y] && c.x >= 0 && c.x < celdas[c.y].length) celdas[c.y][c.x] = c.terreno;
+              }
+              return { ...prev, celdas };
+            }
+            case "token_colocado":
+            case "token_movido":
+            case "token_actualizado": {
+              const token = evento.datos;
+              const tokens = prev.tokens.some((t) => t.id === token.id)
+                ? prev.tokens.map((t) => (t.id === token.id ? token : t))
+                : [...prev.tokens, token];
+              return { ...prev, tokens };
+            }
+            case "token_quitado":
+              return { ...prev, tokens: prev.tokens.filter((t) => t.id !== evento.datos.id) };
+            default:
+              return prev;
+          }
+        });
+      },
+      // Al reconectar tras una caída, volvemos a pedir el estado completo por si
+      // se perdió algún cambio mientras la línea estuvo cortada.
+      () => {
+        api.verMapa(mapaId).then(setMapa).catch(() => undefined);
+        api.listarTiradas(mapaId).then(setTiradas).catch(() => undefined);
+        api.verCombate(mapaId).then(setCombate).catch(() => undefined);
+      },
+    );
+    return cerrarSala;
+  }, [mapaId]);
 
   // ---------- Dibujo ----------
 
@@ -85,6 +156,16 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
       const cx = token.x * celda + celda / 2;
       const cy = token.y * celda + celda / 2;
       const radio = celda * 0.38;
+
+      // Resaltado de la ficha a la que le toca jugar.
+      if (combate?.token_en_turno === token.id) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, radio + 3, 0, Math.PI * 2);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#e3bd72";
+        ctx.stroke();
+      }
+
       ctx.beginPath();
       ctx.arc(cx, cy, radio, 0, Math.PI * 2);
       ctx.fillStyle = token.es_monstruo ? "#a33b2a" : "#c9a35c";
@@ -97,8 +178,21 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(token.nombre.charAt(0).toUpperCase(), cx, cy + 1);
+
+      // Barra de vida (solo si el sistema define vida).
+      if (token.vida_maxima != null && token.vida_actual != null) {
+        const ancho = celda * 0.8;
+        const alto = Math.max(3, celda * 0.11);
+        const bx = cx - ancho / 2;
+        const by = token.y * celda + celda - alto - 1;
+        const fraccion = token.vida_maxima > 0 ? token.vida_actual / token.vida_maxima : 0;
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        ctx.fillRect(bx, by, ancho, alto);
+        ctx.fillStyle = fraccion > 0.5 ? "#8fb573" : fraccion > 0.25 ? "#d8b24a" : "#d4735e";
+        ctx.fillRect(bx, by, ancho * Math.max(0, fraccion), alto);
+      }
     }
-  }, [mapa, terrenos, tokenSel]);
+  }, [mapa, terrenos, tokenSel, combate]);
 
   useEffect(() => {
     dibujar();
@@ -178,6 +272,22 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
     }
   }
 
+  // ---------- Combate (los cambios vuelven por la sala en tiempo real) ----------
+
+  async function ejecutar(accion: () => Promise<unknown>) {
+    setError("");
+    try {
+      await accion();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function ajustarVida(delta: number) {
+    if (tokenSel === null) return;
+    await ejecutar(() => api.cambiarVida(tokenSel, delta));
+  }
+
   // ---------- Eventos del lienzo ----------
 
   function alPresionar(evento: React.PointerEvent) {
@@ -217,6 +327,7 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
         <h1>{mapa.nombre}</h1>
         <span className="subtitulo">
           {mapa.ancho} × {mapa.alto} celdas
+          {conectados > 1 && <span className="conectados"> · 👥 {conectados} conectados</span>}
         </span>
       </header>
 
@@ -226,6 +337,9 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
         </button>
         <button className={modo === "fichas" ? "activa" : ""} onClick={() => setModo("fichas")}>
           ♟ Fichas
+        </button>
+        <button className={modo === "combate" ? "activa" : ""} onClick={() => setModo("combate")}>
+          ⚔ Combate
         </button>
       </div>
 
@@ -264,7 +378,7 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
                 ))}
               </div>
             </>
-          ) : (
+          ) : modo === "fichas" ? (
             <>
               <h3>Fichas</h3>
               {seleccionado ? (
@@ -301,6 +415,102 @@ export default function VistaMapa({ mapaId, sistemaId, navegar }: Props) {
                 ))}
               {personajes.length === 0 && (
                 <p className="nota">Este sistema aún no tiene fichas: créalas en la pestaña "Fichas".</p>
+              )}
+            </>
+          ) : (
+            <>
+              <h3>Combate por turnos</h3>
+
+              <div className="fila">
+                <input
+                  type="text"
+                  className="entrada formula"
+                  value={expresion}
+                  onChange={(e) => setExpresion(e.target.value)}
+                  placeholder="1d20+5"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") ejecutar(() => api.tirarDados(mapaId, { expresion }));
+                  }}
+                />
+                <button className="boton" onClick={() => ejecutar(() => api.tirarDados(mapaId, { expresion }))}>
+                  🎲 Tirar
+                </button>
+              </div>
+              <div className="dados-rapidos">
+                {["1d20", "1d12", "1d10", "1d8", "1d6", "1d4", "2d6"].map((d) => (
+                  <button key={d} className="chip-dado" onClick={() => setExpresion(d)}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+
+              {seleccionado && seleccionado.vida_maxima != null ? (
+                <div className="vida-control">
+                  <p className="nota">
+                    <strong>{seleccionado.nombre}</strong> — {seleccionado.vida_actual}/
+                    {seleccionado.vida_maxima} de vida
+                  </p>
+                  <div className="dados-rapidos">
+                    <button className="chip-dado peligro" onClick={() => ajustarVida(-5)}>−5</button>
+                    <button className="chip-dado peligro" onClick={() => ajustarVida(-1)}>−1</button>
+                    <button className="chip-dado" onClick={() => ajustarVida(1)}>+1</button>
+                    <button className="chip-dado" onClick={() => ajustarVida(5)}>+5</button>
+                  </div>
+                </div>
+              ) : (
+                <p className="nota">
+                  Selecciona una ficha para aplicarle daño o curación (las fichas muestran su
+                  barra de vida si el sistema define una).
+                </p>
+              )}
+
+              <h4>Iniciativa</h4>
+              {!combate ? (
+                <button className="boton" onClick={() => ejecutar(() => api.iniciarCombate(mapaId))}>
+                  Iniciar combate (tira iniciativa)
+                </button>
+              ) : (
+                <>
+                  <p className="nota">Ronda {combate.ronda}</p>
+                  <ol className="orden-iniciativa">
+                    {combate.orden.map((p) => (
+                      <li key={p.token_id} className={p.token_id === combate.token_en_turno ? "en-turno" : ""}>
+                        <span className="espacio">{p.nombre}</span>
+                        <span className="ini">{p.iniciativa}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  <div className="fila">
+                    <button className="boton" onClick={() => ejecutar(() => api.siguienteTurno(mapaId))}>
+                      Siguiente turno →
+                    </button>
+                    <button className="boton boton-peligro" onClick={() => ejecutar(() => api.terminarCombate(mapaId))}>
+                      Terminar
+                    </button>
+                  </div>
+                </>
+              )}
+
+              <h4>Dados de la mesa</h4>
+              {tiradas.length === 0 ? (
+                <p className="nota">Aún no se ha tirado nada.</p>
+              ) : (
+                <ul className="historial-dados">
+                  {[...tiradas].reverse().map((t) => (
+                    <li key={t.id}>
+                      <span className="tirada-total">{t.total}</span>
+                      <span className="tirada-detalle">
+                        <strong>{t.expresion}</strong>
+                        {t.grupos.map((g, i) => (
+                          <span key={i} className="dados-valores"> [{g.valores.join(", ")}]</span>
+                        ))}
+                        {(t.autor || t.motivo) && (
+                          <span className="nota"> — {[t.autor, t.motivo].filter(Boolean).join(": ")}</span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               )}
             </>
           )}
