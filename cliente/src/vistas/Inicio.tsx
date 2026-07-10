@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import * as api from "../api";
 import type { Pantalla } from "../App";
 
@@ -8,6 +8,7 @@ export default function Inicio({ navegar }: { navegar: (p: Pantalla) => void }) 
   const [descripcion, setDescripcion] = useState("");
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(true);
+  const entradaArchivo = useRef<HTMLInputElement>(null);
 
   const recargar = () =>
     api
@@ -28,6 +29,42 @@ export default function Inicio({ navegar }: { navegar: (p: Pantalla) => void }) 
       navegar({ nombre: "sistema", sistemaId: sistema.id });
     } catch (e) {
       setError((e as Error).message);
+    }
+  }
+
+  async function exportar(sistema: api.Sistema) {
+    setError("");
+    try {
+      const datos = await api.exportarSistema(sistema.id);
+      const nombreArchivo =
+        sistema.nombre.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") || "sistema";
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(datos, null, 2)], { type: "application/json" }),
+      );
+      const enlace = document.createElement("a");
+      enlace.href = url;
+      enlace.download = `${nombreArchivo}.breakcode.json`;
+      enlace.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function importar(evento: FormEvent<HTMLInputElement>) {
+    const archivo = evento.currentTarget.files?.[0];
+    evento.currentTarget.value = ""; // permite reimportar el mismo archivo
+    if (!archivo) return;
+    setError("");
+    try {
+      const datos = JSON.parse(await archivo.text());
+      const sistema = await api.importarSistema(datos);
+      navegar({ nombre: "sistema", sistemaId: sistema.id });
+    } catch (e) {
+      const msg = (e as Error).message;
+      setError(
+        msg.includes("JSON") ? "Ese archivo no es un sistema de Breakcode válido." : msg,
+      );
     }
   }
 
@@ -53,7 +90,23 @@ export default function Inicio({ navegar }: { navegar: (p: Pantalla) => void }) 
 
       {error && <div className="error">{error}</div>}
 
-      <h2>Tus sistemas</h2>
+      <div className="fila" style={{ alignItems: "center" }}>
+        <h2 className="espacio">Tus sistemas</h2>
+        <input
+          ref={entradaArchivo}
+          type="file"
+          accept=".json,application/json"
+          onChange={importar}
+          style={{ display: "none" }}
+        />
+        <button
+          className="boton boton-secundario"
+          onClick={() => entradaArchivo.current?.click()}
+        >
+          Importar sistema
+        </button>
+      </div>
+
       {cargando && <p className="nota">Cargando…</p>}
       {!cargando && sistemas.length === 0 && (
         <p className="nota">
@@ -72,6 +125,16 @@ export default function Inicio({ navegar }: { navegar: (p: Pantalla) => void }) 
               <h3>{s.nombre}</h3>
               {s.descripcion && <p className="descripcion">{s.descripcion}</p>}
             </div>
+            <button
+              className="boton boton-secundario"
+              title="Descargar este sistema como archivo (respaldo o para compartir)"
+              onClick={(e) => {
+                e.stopPropagation();
+                exportar(s);
+              }}
+            >
+              Exportar
+            </button>
             <button
               className="boton-peligro boton"
               onClick={(e) => {

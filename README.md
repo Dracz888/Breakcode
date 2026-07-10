@@ -10,22 +10,48 @@ propia aplicación, sin escribir código.
 
 ```
 DISEÑO.md        El documento de diseño (empieza por aquí)
-servidor/        El cerebro: API en Python (FastAPI) — Fase 1
+servidor/        El cerebro: API en Python (FastAPI)
   app/
     formulas.py    Motor de fórmulas tipo Excel (simpleeval)
     dados.py       Tirador de dados ("2d6+3") — Fase 5
     motor.py       Cálculo de estadísticas de una ficha (vida, iniciativa…)
-    models.py      Tablas: sistemas, atributos, estadísticas, personajes
+    models.py      Tablas: sistemas, atributos, estadísticas, personajes,
+                   mapas, mundos y marcadores, campañas/arcos/eventos, voces
     schemas.py     Validación de datos de entrada/salida
     tiempo_real.py Salas multijugador por WebSocket — Fase 4
-    routers/       Las operaciones de la API (incl. combate — Fase 5)
+    terrenos.py    Catálogo de terrenos del mapa de batalla
+    marcadores.py  Catálogo de tipos de marcador del mapa geográfico
+    routers/       Las operaciones de la API (sistemas, personajes, mapas,
+                   combate, geografia, campanas, voces, ambientes)
   tests/           Pruebas automáticas
   ejemplo.py       Carga un sistema de demostración
-cliente/         Las pantallas: aplicación web (React) — Fase 2
+cliente/         Las pantallas: aplicación web (React)
   src/
-    vistas/        Inicio, editor de sistema, ficha de personaje
+    vistas/        Inicio, editor de sistema, ficha, mapa de batalla,
+                   mapa del mundo (Mundo) y campañas (Campana)
     componentes/   Editor de fórmulas con vista previa en vivo
 ```
+
+## Estado por fases
+
+Las 9 fases están construidas y fusionadas: la fábrica de sistemas (atributos,
+fórmulas, fichas), el mapa de batalla, el multijugador en tiempo real, el
+combate por turnos, la publicación (PWA), el **mapa geográfico** del mundo con
+marcadores y las **campañas** con arcos y eventos (fase 7), las **voces** y la
+mesa de sonido (fase 8) y el **refinamiento** (fase 9). Ver la hoja de ruta
+completa en [DISEÑO.md](DISEÑO.md).
+
+### Refinamiento (Fase 9)
+
+Detalles que pulen la mesa de juego:
+
+- **Niebla de guerra** — en el mapa de batalla, el DJ tapa zonas que el jugador
+  aún no debe ver y las revela a medida que el grupo explora (pestaña 🌫 Niebla).
+- **Notas del DJ** — cada sistema guarda notas privadas (intrigas, secretos de
+  la trama) que los jugadores nunca ven (pestaña "Notas del DJ").
+- **Exportar / importar** — descarga un sistema completo (reglas, fichas y
+  mapas) como archivo para respaldarlo o compartirlo, y vuelve a cargarlo en
+  cualquier cuenta desde la pantalla de inicio.
 
 ## Cómo arrancar la aplicación
 

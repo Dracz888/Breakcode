@@ -30,12 +30,19 @@ class SistemaCrear(BaseModel):
     descripcion: str = ""
 
 
+class SistemaEditar(BaseModel):
+    nombre: str | None = Field(default=None, min_length=1, max_length=120)
+    descripcion: str | None = None
+    notas: str | None = None
+
+
 class SistemaSalida(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     nombre: str
     descripcion: str
+    notas: str = ""
 
 
 # ---------- Atributos ----------
@@ -187,6 +194,7 @@ class TokenSalida(BaseModel):
 
 class MapaDetalle(MapaSalida):
     celdas: list[list[str]]
+    niebla: list[list[bool]]
     tokens: list[TokenSalida]
 
 
@@ -236,6 +244,80 @@ class VozSalida(BaseModel):
     descripcion: str
     voz_externa_id: str
     ajustes: dict
+
+
+# ---------- Mapa geográfico (el mundo) ----------
+
+class MapaGeograficoCrear(BaseModel):
+    nombre: str = Field(min_length=1, max_length=120)
+    imagen_url: str = ""
+
+
+class MapaGeograficoEditar(BaseModel):
+    nombre: str | None = Field(default=None, min_length=1, max_length=120)
+    imagen_url: str | None = None
+
+
+class MapaGeograficoSalida(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    sistema_id: int
+    nombre: str
+    imagen_url: str
+
+
+class MarcadorCrear(BaseModel):
+    nombre: str = Field(min_length=1, max_length=120)
+    tipo: str = "punto"
+    descripcion: str = ""
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+
+
+class MarcadorEditar(BaseModel):
+    nombre: str | None = Field(default=None, min_length=1, max_length=120)
+    tipo: str | None = None
+    descripcion: str | None = None
+    x: float | None = Field(default=None, ge=0, le=1)
+    y: float | None = Field(default=None, ge=0, le=1)
+
+
+class MarcadorSalida(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    mapa_id: int
+    nombre: str
+    tipo: str
+    descripcion: str
+    x: float
+    y: float
+
+
+class MapaGeograficoDetalle(MapaGeograficoSalida):
+    marcadores: list[MarcadorSalida]
+
+
+# ---------- Campañas: arcos y eventos ----------
+
+class CampanaCrear(BaseModel):
+    nombre: str = Field(min_length=1, max_length=120)
+    descripcion: str = ""
+
+
+class CampanaEditar(BaseModel):
+    nombre: str | None = Field(default=None, min_length=1, max_length=120)
+    descripcion: str | None = None
+
+
+class CampanaSalida(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    sistema_id: int
+    nombre: str
+    descripcion: str
 
 
 class VozSugerida(BaseModel):
@@ -358,3 +440,119 @@ class CombateSalida(BaseModel):
     indice_turno: int
     orden: list[Participante]
     token_en_turno: int | None = None
+
+
+class ArcoCrear(BaseModel):
+    titulo: str = Field(min_length=1, max_length=160)
+    descripcion: str = ""
+
+
+class ArcoEditar(BaseModel):
+    titulo: str | None = Field(default=None, min_length=1, max_length=160)
+    descripcion: str | None = None
+    orden: int | None = None
+
+
+class EventoCrear(BaseModel):
+    titulo: str = Field(min_length=1, max_length=160)
+    fecha: str = ""
+    descripcion: str = ""
+    marcador_id: int | None = None
+    personajes: list[int] = []
+
+
+class EventoEditar(BaseModel):
+    titulo: str | None = Field(default=None, min_length=1, max_length=160)
+    fecha: str | None = None
+    descripcion: str | None = None
+    orden: int | None = None
+    marcador_id: int | None = None
+    personajes: list[int] | None = None
+
+
+class PersonajeBreve(BaseModel):
+    """Ficha resumida para listar los involucrados en un evento."""
+
+    id: int
+    nombre: str
+    es_monstruo: bool
+
+
+class MarcadorBreve(BaseModel):
+    id: int
+    nombre: str
+    tipo: str
+
+
+class EventoSalida(BaseModel):
+    id: int
+    arco_id: int
+    titulo: str
+    fecha: str
+    descripcion: str
+    orden: int
+    marcador: MarcadorBreve | None
+    personajes: list[PersonajeBreve]
+
+
+class ArcoSalida(BaseModel):
+    id: int
+    campana_id: int
+    titulo: str
+    descripcion: str
+    orden: int
+    eventos: list[EventoSalida]
+
+
+class CampanaDetalle(CampanaSalida):
+    """La campaña completa: sus arcos y eventos en orden (la línea de tiempo)."""
+
+    arcos: list[ArcoSalida]
+
+
+# ---------- Niebla de guerra (fase 9) ----------
+
+class CambioDeNiebla(BaseModel):
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)
+    oculta: bool  # True = tapar la celda; False = revelarla al jugador
+
+
+class PintarNiebla(BaseModel):
+    cambios: list[CambioDeNiebla] = Field(min_length=1, max_length=6400)
+
+
+# ---------- Exportar / importar sistemas (fase 9) ----------
+
+class MapaExportado(BaseModel):
+    nombre: str
+    ancho: int
+    alto: int
+    celdas: list[list[str]]
+    niebla: list[list[bool]] = []
+
+
+class PersonajeExportado(BaseModel):
+    nombre: str
+    nivel: int = 1
+    es_monstruo: bool = False
+    atributos: dict[str, float] = {}
+
+
+class SistemaExportado(BaseModel):
+    """El sistema completo en un archivo: reglas, fichas y mapas.
+
+    Sirve de respaldo y para compartir un sistema con otra mesa. Los tokens
+    (la posición de una ficha sobre un mapa) no se exportan a propósito: son
+    estado de partida, no parte del diseño del sistema.
+    """
+
+    formato: str = "breakcode/sistema"
+    version: int = 1
+    nombre: str = Field(min_length=1, max_length=120)
+    descripcion: str = ""
+    notas: str = ""
+    atributos: list[AtributoSalida] = []
+    estadisticas: list[EstadisticaSalida] = []
+    personajes: list[PersonajeExportado] = []
+    mapas: list[MapaExportado] = []
