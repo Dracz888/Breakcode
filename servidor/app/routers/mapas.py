@@ -32,6 +32,14 @@ def _token_a_salida(token: models.Token) -> schemas.TokenSalida:
     )
 
 
+def _niebla_normalizada(mapa: models.Mapa) -> list[list[bool]]:
+    """La niebla siempre se devuelve como rejilla completa (False = visible),
+    aunque en la base se guarde vacía para ahorrar espacio."""
+    if mapa.niebla and len(mapa.niebla) == mapa.alto:
+        return mapa.niebla
+    return [[False] * mapa.ancho for _ in range(mapa.alto)]
+
+
 def _mapa_a_detalle(mapa: models.Mapa) -> schemas.MapaDetalle:
     return schemas.MapaDetalle(
         id=mapa.id,
@@ -40,6 +48,7 @@ def _mapa_a_detalle(mapa: models.Mapa) -> schemas.MapaDetalle:
         ancho=mapa.ancho,
         alto=mapa.alto,
         celdas=mapa.celdas,
+        niebla=_niebla_normalizada(mapa),
         tokens=[_token_a_salida(t) for t in mapa.tokens],
     )
 
@@ -96,6 +105,7 @@ def crear_mapa(sistema_id: int, datos: schemas.MapaCrear, db: Session = Depends(
         ancho=datos.ancho,
         alto=datos.alto,
         celdas=[[TERRENO_INICIAL] * datos.ancho for _ in range(datos.alto)],
+        niebla=[[False] * datos.ancho for _ in range(datos.alto)],
     )
     db.add(mapa)
     db.commit()
@@ -143,6 +153,23 @@ def pintar_celdas(
     db.commit()
     db.refresh(mapa)
     gestor.anunciar(mapa.id, "terreno", {"cambios": [c.model_dump() for c in datos.cambios]})
+    return _mapa_a_detalle(mapa)
+
+
+@router.put("/mapas/{mapa_id}/niebla", response_model=schemas.MapaDetalle)
+def pintar_niebla(
+    mapa_id: int, datos: schemas.PintarNiebla, db: Session = Depends(obtener_db)
+):
+    """El DJ tapa o revela celdas: la niebla de guerra oculta zonas al jugador."""
+    mapa = _obtener_mapa(db, mapa_id)
+    niebla = [fila[:] for fila in _niebla_normalizada(mapa)]
+    for cambio in datos.cambios:
+        if not (0 <= cambio.x < mapa.ancho and 0 <= cambio.y < mapa.alto):
+            raise HTTPException(422, "Hay una celda fuera del mapa en los cambios")
+        niebla[cambio.y][cambio.x] = cambio.oculta
+    mapa.niebla = niebla
+    db.commit()
+    db.refresh(mapa)
     return _mapa_a_detalle(mapa)
 
 

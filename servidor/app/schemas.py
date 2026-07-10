@@ -30,12 +30,19 @@ class SistemaCrear(BaseModel):
     descripcion: str = ""
 
 
+class SistemaEditar(BaseModel):
+    nombre: str | None = Field(default=None, min_length=1, max_length=120)
+    descripcion: str | None = None
+    notas: str | None = None
+
+
 class SistemaSalida(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     nombre: str
     descripcion: str
+    notas: str = ""
 
 
 # ---------- Atributos ----------
@@ -187,6 +194,7 @@ class TokenSalida(BaseModel):
 
 class MapaDetalle(MapaSalida):
     celdas: list[list[str]]
+    niebla: list[list[bool]]
     tokens: list[TokenSalida]
 
 
@@ -500,3 +508,51 @@ class CampanaDetalle(CampanaSalida):
     """La campaña completa: sus arcos y eventos en orden (la línea de tiempo)."""
 
     arcos: list[ArcoSalida]
+
+
+# ---------- Niebla de guerra (fase 9) ----------
+
+class CambioDeNiebla(BaseModel):
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)
+    oculta: bool  # True = tapar la celda; False = revelarla al jugador
+
+
+class PintarNiebla(BaseModel):
+    cambios: list[CambioDeNiebla] = Field(min_length=1, max_length=6400)
+
+
+# ---------- Exportar / importar sistemas (fase 9) ----------
+
+class MapaExportado(BaseModel):
+    nombre: str
+    ancho: int
+    alto: int
+    celdas: list[list[str]]
+    niebla: list[list[bool]] = []
+
+
+class PersonajeExportado(BaseModel):
+    nombre: str
+    nivel: int = 1
+    es_monstruo: bool = False
+    atributos: dict[str, float] = {}
+
+
+class SistemaExportado(BaseModel):
+    """El sistema completo en un archivo: reglas, fichas y mapas.
+
+    Sirve de respaldo y para compartir un sistema con otra mesa. Los tokens
+    (la posición de una ficha sobre un mapa) no se exportan a propósito: son
+    estado de partida, no parte del diseño del sistema.
+    """
+
+    formato: str = "breakcode/sistema"
+    version: int = 1
+    nombre: str = Field(min_length=1, max_length=120)
+    descripcion: str = ""
+    notas: str = ""
+    atributos: list[AtributoSalida] = []
+    estadisticas: list[EstadisticaSalida] = []
+    personajes: list[PersonajeExportado] = []
+    mapas: list[MapaExportado] = []

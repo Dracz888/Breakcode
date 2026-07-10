@@ -5,6 +5,7 @@ export interface Sistema {
   id: number;
   nombre: string;
   descripcion: string;
+  notas: string;
 }
 
 export interface Atributo {
@@ -76,8 +77,20 @@ export const verSistema = (id: number) => pedir<SistemaDetalle>(`/sistemas/${id}
 export const crearSistema = (datos: { nombre: string; descripcion: string }) =>
   pedir<Sistema>("/sistemas", { method: "POST", body: JSON.stringify(datos) });
 
+export const editarSistema = (
+  id: number,
+  datos: { nombre?: string; descripcion?: string; notas?: string },
+) => pedir<SistemaDetalle>(`/sistemas/${id}`, { method: "PUT", body: JSON.stringify(datos) });
+
 export const borrarSistema = (id: number) =>
   pedir<void>(`/sistemas/${id}`, { method: "DELETE" });
+
+// Sistema completo como archivo (reglas, fichas y mapas): respaldo y compartir.
+export const exportarSistema = (id: number) =>
+  pedir<Record<string, unknown>>(`/sistemas/${id}/exportar`);
+
+export const importarSistema = (datos: unknown) =>
+  pedir<Sistema>("/sistemas/importar", { method: "POST", body: JSON.stringify(datos) });
 
 // ---------- Atributos ----------
 
@@ -191,6 +204,7 @@ export interface Token {
 
 export interface MapaDetalle extends Mapa {
   celdas: string[][];
+  niebla: boolean[][];
   tokens: Token[];
 }
 
@@ -213,6 +227,15 @@ export const pintarCeldas = (
   cambios: { x: number; y: number; terreno: string }[],
 ) =>
   pedir<MapaDetalle>(`/mapas/${mapaId}/celdas`, {
+    method: "PUT",
+    body: JSON.stringify({ cambios }),
+  });
+
+export const pintarNiebla = (
+  mapaId: number,
+  cambios: { x: number; y: number; oculta: boolean }[],
+) =>
+  pedir<MapaDetalle>(`/mapas/${mapaId}/niebla`, {
     method: "PUT",
     body: JSON.stringify({ cambios }),
   });

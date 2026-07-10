@@ -34,11 +34,24 @@ cliente/         Las pantallas: aplicación web (React)
 
 ## Estado por fases
 
-Fases 1–3 y 7 construidas: la fábrica de sistemas (atributos, fórmulas,
-fichas), el mapa de batalla, y —desde la fase 7— el **mapa geográfico** del
-mundo con marcadores de lugares y las **campañas** con sus arcos y eventos
-(la línea de tiempo de la trama). Ver la hoja de ruta completa en
-[DISEÑO.md](DISEÑO.md).
+Las 9 fases están construidas y fusionadas: la fábrica de sistemas (atributos,
+fórmulas, fichas), el mapa de batalla, el multijugador en tiempo real, el
+combate por turnos, la publicación (PWA), el **mapa geográfico** del mundo con
+marcadores y las **campañas** con arcos y eventos (fase 7), las **voces** y la
+mesa de sonido (fase 8) y el **refinamiento** (fase 9). Ver la hoja de ruta
+completa en [DISEÑO.md](DISEÑO.md).
+
+### Refinamiento (Fase 9)
+
+Detalles que pulen la mesa de juego:
+
+- **Niebla de guerra** — en el mapa de batalla, el DJ tapa zonas que el jugador
+  aún no debe ver y las revela a medida que el grupo explora (pestaña 🌫 Niebla).
+- **Notas del DJ** — cada sistema guarda notas privadas (intrigas, secretos de
+  la trama) que los jugadores nunca ven (pestaña "Notas del DJ").
+- **Exportar / importar** — descarga un sistema completo (reglas, fichas y
+  mapas) como archivo para respaldarlo o compartirlo, y vuelve a cargarlo en
+  cualquier cuenta desde la pantalla de inicio.
 
 ## Cómo arrancar la aplicación
 

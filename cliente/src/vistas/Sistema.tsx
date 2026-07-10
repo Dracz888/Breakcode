@@ -13,7 +13,8 @@ type PestanaId =
   | "voces"
   | "ambientes"
   | "mundo"
-  | "campanas";
+  | "campanas"
+  | "notas";
 
 interface Props {
   sistemaId: number;
@@ -73,6 +74,7 @@ export default function VistaSistema({ sistemaId, navegar }: Props) {
             ["ambientes", "Ambientes"],
             ["mundo", "Mundo"],
             ["campanas", "Campañas"],
+            ["notas", "Notas del DJ"],
           ] as [PestanaId, string][]
         ).map(([id, titulo]) => (
           <button
@@ -113,6 +115,9 @@ export default function VistaSistema({ sistemaId, navegar }: Props) {
       )}
       {pestana === "campanas" && (
         <PestanaCampanas sistema={sistema} navegar={navegar} setError={setError} />
+      )}
+      {pestana === "notas" && (
+        <PestanaNotas sistema={sistema} recargar={recargar} setError={setError} />
       )}
     </>
   );
@@ -524,6 +529,61 @@ function PestanaCampanas({
             Crear campaña
           </button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Pestaña: Notas del DJ ----------
+
+function PestanaNotas({
+  sistema,
+  recargar,
+  setError,
+}: {
+  sistema: api.SistemaDetalle;
+  recargar: () => Promise<void>;
+  setError: (m: string) => void;
+}) {
+  const [texto, setTexto] = useState(sistema.notas ?? "");
+  const [guardado, setGuardado] = useState(false);
+
+  async function guardar() {
+    setError("");
+    setGuardado(false);
+    try {
+      await api.editarSistema(sistema.id, { notas: texto });
+      await recargar();
+      setGuardado(true);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  const sinCambios = texto === (sistema.notas ?? "");
+
+  return (
+    <div className="tarjeta">
+      <h3>Notas privadas del DJ</h3>
+      <p className="nota">
+        Solo para ti: intrigas, secretos de la trama, recordatorios de la mesa. Los
+        jugadores nunca ven esto.
+      </p>
+      <textarea
+        className="area-notas"
+        value={texto}
+        onChange={(e) => {
+          setTexto(e.target.value);
+          setGuardado(false);
+        }}
+        rows={14}
+        placeholder="Ej. El posadero es en realidad un espía del Reino Roto…"
+      />
+      <div className="fila" style={{ marginTop: 12, alignItems: "center" }}>
+        <button className="boton espacio" onClick={guardar} disabled={sinCambios}>
+          Guardar notas
+        </button>
+        {guardado && sinCambios && <span className="nota">Guardado ✓</span>}
       </div>
     </div>
   );
