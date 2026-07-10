@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from .. import formulas, models, schemas
+from .. import models, motor, schemas
 from ..database import obtener_db
 
 router = APIRouter(tags=["Fichas"])
@@ -12,10 +12,7 @@ router = APIRouter(tags=["Fichas"])
 def _con_estadisticas(personaje: models.Personaje) -> schemas.PersonajeConEstadisticas:
     """Arma la ficha completa: las estadísticas se calculan siempre al momento,
     así cualquier cambio en las fórmulas del sistema se refleja de inmediato."""
-    variables: dict[str, float] = dict(personaje.atributos)
-    variables["nivel"] = personaje.nivel
-    formulas_del_sistema = {e.clave: e.formula for e in personaje.sistema.estadisticas}
-    valores, errores = formulas.evaluar_conjunto(formulas_del_sistema, variables)
+    valores, errores = motor.estadisticas_de(personaje)
     return schemas.PersonajeConEstadisticas(
         id=personaje.id,
         sistema_id=personaje.sistema_id,

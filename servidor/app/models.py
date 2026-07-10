@@ -23,12 +23,20 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .database import Base
 
 
+def _ahora() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 class Sistema(Base):
     __tablename__ = "sistemas"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     nombre: Mapped[str] = mapped_column(String(120))
     descripcion: Mapped[str] = mapped_column(Text, default="")
+    # Ajustes del combate por turnos, editables por sistema (ver schemas.ConfigCombate):
+    # de qué atributo/fórmula sale la iniciativa, qué dado la acompaña y qué
+    # estadística marca la vida máxima. Vacío = valores por defecto sensatos.
+    config_combate: Mapped[dict] = mapped_column(JSON, default=dict)
 
     atributos: Mapped[list["DefinicionAtributo"]] = relationship(
         back_populates="sistema", cascade="all, delete-orphan"
@@ -125,10 +133,21 @@ class Mapa(Base):
     tokens: Mapped[list["Token"]] = relationship(
         back_populates="mapa", cascade="all, delete-orphan"
     )
+    tiradas: Mapped[list["TiradaDado"]] = relationship(
+        back_populates="mapa", cascade="all, delete-orphan"
+    )
+    combate: Mapped["Combate | None"] = relationship(
+        back_populates="mapa", cascade="all, delete-orphan", uselist=False
+    )
 
 
 class Token(Base):
-    """La presencia de una ficha sobre una celda del mapa."""
+    """La presencia de una ficha sobre una celda del mapa.
+
+    La vida es del token, no de la ficha: las heridas pertenecen a esta batalla
+    (un mismo monstruo puede aparecer sano en otro mapa). 'vida_actual' es None
+    cuando el sistema no define una estadística de vida.
+    """
 
     __tablename__ = "tokens"
     __table_args__ = (UniqueConstraint("mapa_id", "personaje_id"),)
@@ -138,6 +157,7 @@ class Token(Base):
     personaje_id: Mapped[int] = mapped_column(ForeignKey("personajes.id"))
     x: Mapped[int] = mapped_column(Integer)
     y: Mapped[int] = mapped_column(Integer)
+    vida_actual: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     mapa: Mapped[Mapa] = relationship(back_populates="tokens")
     personaje: Mapped[Personaje] = relationship(back_populates="tokens")
@@ -213,3 +233,39 @@ class Ambiente(Base):
     bucle: Mapped[bool] = mapped_column(Boolean, default=True)
 
     sistema: Mapped[Sistema] = relationship(back_populates="ambientes")
+
+
+class TiradaDado(Base):
+    """Una tirada de dados registrada en el historial compartido de un mapa."""
+
+    __tablename__ = "tiradas"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mapa_id: Mapped[int] = mapped_column(ForeignKey("mapas.id"))
+    autor: Mapped[str] = mapped_column(String(120), default="")
+    motivo: Mapped[str] = mapped_column(String(200), default="")
+    expresion: Mapped[str] = mapped_column(String(120))
+    grupos: Mapped[list] = mapped_column(JSON)  # [{cantidad, caras, valores:[...]}]
+    modificador: Mapped[int] = mapped_column(Integer, default=0)
+    total: Mapped[int] = mapped_column(Integer)
+    creada_en: Mapped[datetime] = mapped_column(DateTime, default=_ahora)
+
+    mapa: Mapped[Mapa] = relationship(back_populates="tiradas")
+
+
+class Combate(Base):
+    """El seguimiento de un combate por turnos sobre un mapa (uno por mapa).
+
+    'orden' es la lista de participantes ya ordenada por iniciativa:
+    [{token_id, nombre, iniciativa}]. El turno actual es orden[indice_turno].
+    """
+
+    __tablename__ = "combates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mapa_id: Mapped[int] = mapped_column(ForeignKey("mapas.id"), unique=True)
+    ronda: Mapped[int] = mapped_column(Integer, default=1)
+    indice_turno: Mapped[int] = mapped_column(Integer, default=0)
+    orden: Mapped[list] = mapped_column(JSON, default=list)
+
+    mapa: Mapped[Mapa] = relationship(back_populates="combate")

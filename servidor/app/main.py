@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
-from .routers import ambientes, mapas, personajes, sistemas, voces
+from .routers import ambientes, combate, mapas, personajes, sistemas, voces
 
 Base.metadata.create_all(bind=engine)
 
@@ -27,8 +27,16 @@ app = FastAPI(
 app.include_router(sistemas.router)
 app.include_router(personajes.router)
 app.include_router(mapas.router)
+app.include_router(combate.router)
 app.include_router(voces.router)
 app.include_router(ambientes.router)
+
+
+@app.get("/salud", include_in_schema=False)
+def salud():
+    """Señal de vida para el hosting (health check). Debe ir antes del montaje
+    de estáticos para que no la absorba la aplicación web."""
+    return {"estado": "ok"}
 
 
 # Si la aplicación visual ya está construida (cliente/dist), este mismo

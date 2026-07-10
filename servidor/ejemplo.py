@@ -7,6 +7,7 @@ cinco fórmulas y dos fichas (una heroína y un monstruo). Todo esto es
 borrable y editable — es solo material de demostración.
 """
 
+from app import motor
 from app.database import Base, SesionLocal, engine
 from app.models import (
     DefinicionAtributo,
@@ -29,6 +30,13 @@ if db.query(Sistema).filter_by(nombre="Fantasía básica").first():
 sistema = Sistema(
     nombre="Fantasía básica",
     descripcion="Sistema de demostración con las tres categorías clásicas.",
+    # Listo para el combate por turnos: la iniciativa sale de la estadística
+    # 'iniciativa' más 1d20, y la vida máxima de la estadística 'vida_maxima'.
+    config_combate={
+        "formula_iniciativa": "iniciativa",
+        "dado_iniciativa": "1d20",
+        "estadistica_vida": "vida_maxima",
+    },
 )
 db.add(sistema)
 db.flush()
@@ -132,8 +140,14 @@ db.add(mapa)
 db.flush()
 db.add_all(
     [
-        Token(mapa_id=mapa.id, personaje_id=kaelith.id, x=3, y=5),
-        Token(mapa_id=mapa.id, personaje_id=ogro.id, x=13, y=5),
+        Token(
+            mapa_id=mapa.id, personaje_id=kaelith.id, x=3, y=5,
+            vida_actual=motor.vida_maxima_de(kaelith),  # nace con la vida llena
+        ),
+        Token(
+            mapa_id=mapa.id, personaje_id=ogro.id, x=13, y=5,
+            vida_actual=motor.vida_maxima_de(ogro),
+        ),
     ]
 )
 
